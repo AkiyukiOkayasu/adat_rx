@@ -6,6 +6,14 @@
 /// # 動作
 /// - 非同期のADAT入力を2段のフリップフロップで同期化
 /// - XORでエッジ（遷移）を検出
+///
+/// ```wavedrom
+/// {"signal": [
+///   {"name": "i_adat", "wave": "0.1..0.."},
+///   {"name": "o_synced", "wave": "0..1..0."},
+///   {"name": "o_edge", "wave": "0.1..0.."}
+/// ]}
+/// ```
 pub module edge_detector (
     /// システムクロック
     i_clk: input clock,

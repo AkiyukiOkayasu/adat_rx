@@ -14,6 +14,14 @@
 /// - 2.5〜3.5 bit time → 3 bits ("001")
 /// - 3.5〜4.5 bit time → 4 bits ("0001")
 /// - 4.5〜5.5 bit time → 5 bits ("00001")
+///
+/// ```wavedrom
+/// {"signal": [
+///   {"name": "i_edge", "wave": "0..1..0..1"},
+///   {"name": "o_valid", "wave": "0..1..0..1"},
+///   {"name": "o_bit_count", "wave": "x.2.x.3."}
+/// ]}
+/// ```
 pub module bit_decoder (
     /// システムクロック
     i_clk: input clock,
@@ -72,19 +80,19 @@ pub module bit_decoder (
                 r_count = 3'd1;
             } else if edge_bits <= t2 {
                 // 2 bits: "01"
-                r_bits  = 5'b00001;
+                r_bits  = 5'b00011;
                 r_count = 3'd2;
             } else if edge_bits <= t3 {
                 // 3 bits: "001"
-                r_bits  = 5'b00001;
+                r_bits  = 5'b00111;
                 r_count = 3'd3;
             } else if edge_bits <= t4 {
                 // 4 bits: "0001"
-                r_bits  = 5'b00001;
+                r_bits  = 5'b01111;
                 r_count = 3'd4;
             } else {
                 // 5 bits: "00001"
-                r_bits  = 5'b00001;
+                r_bits  = 5'b11111;
                 r_count = 3'd5;
             }
         } else if !i_sync_mask {

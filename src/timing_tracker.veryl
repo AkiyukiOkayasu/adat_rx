@@ -8,6 +8,14 @@
 /// 2. 最大時間を追跡（遅い減衰付き）
 /// 3. 最大時間の3/4を超えたら同期パターンと判定
 /// 4. 同期→同期間の時間をフレーム時間として記録
+///
+/// ```wavedrom
+/// {"signal": [
+///   {"name": "i_edge", "wave": "0..1..0..1"},
+///   {"name": "o_edge_time", "wave": "x.3.4.x.."},
+///   {"name": "o_sync_detect", "wave": "0..1..1.."}
+/// ]}
+/// ```
 pub module timing_tracker (
     /// システムクロック
     i_clk: input clock,
@@ -51,8 +59,15 @@ pub module timing_tracker (
     // 遷移間時間カウンタと最大時間追跡
     always_ff (i_clk, i_rst) {
         if_reset {
-            cur_time   = 12'd0;
-            max_time   = 10'h3FF;
+            cur_time = 12'd0;
+            // 初期値を「8クロック/bit × 5ビット = 40クロック」に設定
+            // これにより、5ビットまでのデータ期間はsync_mask=1、同期期間はsync_mask=0になる
+            // 40/4 = 10、threshold = 10 * 0.75 = 7.5 → 7
+            // データ期間(最大40クロック): cur_time/4 = 10 > 7 → うまくいかない…
+            // 理想的にはmax_timeを20に設定: threshold=15
+            // データ(最大40): cur_time/4=10 < 15 → sync_mask=1 ✓
+            // 同期(80): cur_time/4=20 > 15 → sync_mask=0 ✓
+            max_time   = 10'd20; // 80クロック / 4 = 20 (i_edge_time[11:2]単位)
             wait_count = 16'd0;
         } else if i_edge {
             // エッジでカウンタをリセット、最大値を更新

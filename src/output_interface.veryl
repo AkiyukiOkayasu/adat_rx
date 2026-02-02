@@ -11,6 +11,14 @@ import adat_pkg::*;
 ///
 /// # ワードクロック
 /// フレーム周期の約50%デューティで出力
+///
+/// ```wavedrom
+/// {"signal": [
+///   {"name": "o_word_clk", "wave": "1010...."},
+///   {"name": "o_valid", "wave": "0....1.."},
+///   {"name": "o_locked", "wave": "0..1...."}
+/// ]}
+/// ```
 pub module output_interface (
     /// システムクロック
     i_clk: input clock,
@@ -84,14 +92,6 @@ pub module output_interface (
         if_reset {
             frame_cnt = 4'd0;
             locked    = 1'b0;
-        } else if !i_sync {
-            // 同期外れたらカウントダウン
-            if frame_cnt >: 4'd0 {
-                frame_cnt = frame_cnt - 4'd1;
-            }
-            if frame_cnt == 4'd0 {
-                locked = 1'b0;
-            }
         } else if i_data_valid && i_channel == 3'd7 {
             // 最後のチャンネル受信でカウントアップ
             if frame_cnt <: 4'd15 {

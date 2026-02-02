@@ -10,6 +10,19 @@ import adat_pkg::*;
 /// - 96kHz: 4チャンネル (S/MUX2)
 /// - 192kHz: 2チャンネル (S/MUX4)
 ///
+/// # ADATフレーム構造 (概略)
+/// ```wavedrom
+/// {
+///   "signal": [
+///     {"name": "frame", "wave": "|....|....|....|....|....|"},
+///     {"name": "sync",  "wave": "|0...|"},
+///     {"name": "user",  "wave": "|.xx.|"},
+///     {"name": "ch0",   "wave": "|..x.|"},
+///     {"name": "ch1",   "wave": "|...x|"}
+///   ]
+/// }
+/// ```
+///
 /// # 使用例
 /// ```veryl
 /// inst adat: adat_rx (
@@ -51,13 +64,14 @@ pub module adat_rx (
     var max_time   : logic<10>;
     var sync_detect: logic    ;
     var frame_time : logic<12>;
-    var bits       : logic<5> ;
-    var bit_count  : logic<3> ;
-    var bits_valid : logic    ;
-    var user_bits  : logic<4> ;
-    var pcm_data   : logic<24>;
-    var channel    : logic<3> ;
-    var data_valid : logic    ;
+
+    var bits      : logic<5> ;
+    var bit_count : logic<3> ;
+    var bits_valid: logic    ;
+    var user_bits : logic<4> ;
+    var pcm_data  : logic<24>;
+    var channel   : logic<3> ;
+    var data_valid: logic    ;
 
     // エッジ検出モジュール
     inst u_edge_detector: edge_detector (

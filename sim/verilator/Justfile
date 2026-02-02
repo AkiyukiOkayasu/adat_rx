@@ -1,0 +1,47 @@
+# ADAT Receiver Verilator justfile
+#
+# 使用方法:
+#   just        - ビルドと実行
+#   just build  - ビルドのみ
+#   just run    - 実行
+#   just wave   - 波形表示 (GTKWave)
+#   just clean  - クリーンアップ
+#   just fmt    - Verylフォーマット
+
+PROJ_ROOT := "../.."
+OBJ_DIR := "obj_dir"
+
+VERILATOR := "verilator"
+VERILATOR_FLAGS := "--cc --exe --build -j 0 -Wall -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-TIMESCALEMOD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC --timing"
+
+all: run
+
+# Verylフォーマット
+fmt:
+  cd {{PROJ_ROOT}} && veryl fmt
+
+# Verylビルド
+veryl: fmt
+  cd {{PROJ_ROOT}} && veryl build
+
+# Verilatorビルド
+build: veryl
+  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_adat_rx -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv {{PROJ_ROOT}}/target/edge_detector.sv {{PROJ_ROOT}}/target/timing_tracker.sv {{PROJ_ROOT}}/target/bit_decoder.sv {{PROJ_ROOT}}/target/frame_parser.sv {{PROJ_ROOT}}/target/output_interface.sv {{PROJ_ROOT}}/target/adat_rx.sv sim_main.cpp
+
+# 実行
+run: build
+  ./{{OBJ_DIR}}/Vtb_adat_rx
+
+# 波形表示
+wave: run
+  gtkwave adat_rx.vcd &
+
+# クリーンアップ
+clean:
+  rm -rf {{OBJ_DIR}}
+  rm -f *.vcd
+  rm -f {{PROJ_ROOT}}/target/*.sv
+
+# タスク一覧
+help:
+  @just --list
