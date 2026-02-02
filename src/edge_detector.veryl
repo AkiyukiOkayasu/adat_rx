@@ -1,20 +1,20 @@
 /// ADAT入力の同期化とエッジ検出
-/// 
+///
 /// 2段FFでメタスタビリティ対策を行い、
 /// 立ち上がり/立ち下がりエッジを検出する。
-/// 
+///
 /// # 動作
 /// - 非同期のADAT入力を2段のフリップフロップで同期化
 /// - XORでエッジ（遷移）を検出
 pub module edge_detector (
     /// システムクロック
-    i_clk   : input  clock,
+    i_clk: input clock,
     /// アクティブハイリセット
-    i_rst   : input  reset,
+    i_rst: input reset,
     /// 非同期ADAT入力
-    i_adat  : input  logic,
+    i_adat: input logic,
     /// エッジ検出パルス (1クロック幅)
-    o_edge  : output logic,
+    o_edge: output logic,
     /// 同期化されたADAT信号
     o_synced: output logic,
 ) {

@@ -1,15 +1,15 @@
 import adat_pkg::*;
 
 /// ADATレシーバ トップモジュール
-/// 
+///
 /// ADAT光入力から8チャンネル24ビットPCMをデコードする。
 /// クロックはADAT信号から自動復元される（外部PLLは不要）。
-/// 
+///
 /// # 対応サンプルレート
 /// - 48kHz: 8チャンネル
 /// - 96kHz: 4チャンネル (S/MUX2)
 /// - 192kHz: 2チャンネル (S/MUX4)
-/// 
+///
 /// # 使用例
 /// ```veryl
 /// inst adat: adat_rx (
@@ -20,106 +20,106 @@ import adat_pkg::*;
 ///     o_word_clk: word_clk,
 /// );
 /// ```
-/// 
+///
 /// # タイミング
 /// - 推奨クロック: 100MHz
 /// - ADAT入力: TOSLINK光→電気変換済み信号
 pub module adat_rx (
     /// システムクロック (100MHz推奨)
-    i_clk        : input  clock,
+    i_clk: input clock,
     /// アクティブハイリセット
-    i_rst        : input  reset,
+    i_rst: input reset,
     /// ADAT入力 (光→電気変換済み)
-    i_adat       : input  logic,
+    i_adat: input logic,
     /// ユーザーデータ出力 (4bit)
-    o_user       : output logic<4>,
+    o_user: output logic<4>,
     /// ワードクロック出力
-    o_word_clk   : output logic,
+    o_word_clk: output logic,
     /// 検出されたサンプルレート
     o_sample_rate: output SampleRate,
     /// 8チャンネルPCMデータ出力
-    o_channels   : output logic<24> [8],
+    o_channels: output logic<24> [8],
     /// データ有効信号
-    o_valid      : output logic,
+    o_valid: output logic,
     /// 同期ロック状態
-    o_locked     : output logic,
+    o_locked: output logic,
 ) {
     // 内部信号
-    var adat_edge  : logic;
-    var synced     : logic;
+    var adat_edge  : logic    ;
+    var synced     : logic    ;
     var edge_time  : logic<12>;
     var max_time   : logic<10>;
-    var sync_detect: logic;
+    var sync_detect: logic    ;
     var frame_time : logic<12>;
-    var bits       : logic<5>;
-    var bit_count  : logic<3>;
-    var bits_valid : logic;
-    var user_bits  : logic<4>;
+    var bits       : logic<5> ;
+    var bit_count  : logic<3> ;
+    var bits_valid : logic    ;
+    var user_bits  : logic<4> ;
     var pcm_data   : logic<24>;
-    var channel    : logic<3>;
-    var data_valid : logic;
+    var channel    : logic<3> ;
+    var data_valid : logic    ;
 
     // エッジ検出モジュール
     inst u_edge_detector: edge_detector (
-        i_clk   : i_clk,
-        i_rst   : i_rst,
-        i_adat  : i_adat,
+        i_clk   : i_clk    ,
+        i_rst   : i_rst    ,
+        i_adat  : i_adat   ,
         o_edge  : adat_edge,
-        o_synced: synced,
+        o_synced: synced   ,
     );
 
     // タイミング追跡モジュール
     inst u_timing_tracker: timing_tracker (
-        i_clk        : i_clk,
-        i_rst        : i_rst,
-        i_edge       : adat_edge,
-        o_edge_time  : edge_time,
-        o_max_time   : max_time,
+        i_clk        : i_clk      ,
+        i_rst        : i_rst      ,
+        i_edge       : adat_edge  ,
+        o_edge_time  : edge_time  ,
+        o_max_time   : max_time   ,
         o_sync_detect: sync_detect,
-        o_frame_time : frame_time,
+        o_frame_time : frame_time ,
     );
 
     // ビットデコーダモジュール
     inst u_bit_decoder: bit_decoder (
-        i_clk       : i_clk,
-        i_rst       : i_rst,
-        i_edge      : adat_edge,
-        i_edge_time : edge_time,
-        i_frame_time: frame_time,
+        i_clk       : i_clk      ,
+        i_rst       : i_rst      ,
+        i_edge      : adat_edge  ,
+        i_edge_time : edge_time  ,
+        i_frame_time: frame_time ,
         i_sync_mask : sync_detect,
-        o_bits      : bits,
-        o_bit_count : bit_count,
-        o_valid     : bits_valid,
+        o_bits      : bits       ,
+        o_bit_count : bit_count  ,
+        o_valid     : bits_valid ,
     );
 
     // フレームパーサモジュール
     inst u_frame_parser: frame_parser (
-        i_clk       : i_clk,
-        i_rst       : i_rst,
-        i_bits      : bits,
-        i_bit_count : bit_count,
-        i_valid     : bits_valid,
+        i_clk       : i_clk      ,
+        i_rst       : i_rst      ,
+        i_bits      : bits       ,
+        i_bit_count : bit_count  ,
+        i_valid     : bits_valid ,
         i_sync      : sync_detect,
-        o_user      : user_bits,
-        o_data      : pcm_data,
-        o_channel   : channel,
-        o_data_valid: data_valid,
+        o_user      : user_bits  ,
+        o_data      : pcm_data   ,
+        o_channel   : channel    ,
+        o_data_valid: data_valid ,
     );
 
     // 出力インターフェースモジュール
     inst u_output_interface: output_interface (
-        i_clk        : i_clk,
-        i_rst        : i_rst,
-        i_frame_time : frame_time,
-        i_data       : pcm_data,
-        i_channel    : channel,
-        i_data_valid : data_valid,
-        i_sync       : sync_detect,
+        i_clk        : i_clk        ,
+        i_rst        : i_rst        ,
+        i_frame_time : frame_time   ,
+        i_data       : pcm_data     ,
+        i_channel    : channel      ,
+        i_data_valid : data_valid   ,
+        i_sync       : sync_detect  ,
         o_sample_rate: o_sample_rate,
-        o_word_clk   : o_word_clk,
-        o_channels   : o_channels,
-        o_valid      : o_valid,
-        o_locked     : o_locked,
+        o_word_clk   : o_word_clk   ,
+        o_channels   : o_channels   ,
+        o_valid      : o_valid      ,
+        o_locked     : o_locked     ,
     );
 
     assign o_user = user_bits;

@@ -1,8 +1,8 @@
 /// タイミング追跡モジュール
-/// 
+///
 /// エッジ間の時間を計測し、最大時間を追跡して同期パターンを検出する。
 /// フレーム時間も計測してビットデコードの基準を提供。
-/// 
+///
 /// # アルゴリズム
 /// 1. エッジ間の時間をカウント
 /// 2. 最大時間を追跡（遅い減衰付き）
@@ -10,19 +10,19 @@
 /// 4. 同期→同期間の時間をフレーム時間として記録
 pub module timing_tracker (
     /// システムクロック
-    i_clk        : input  clock,
+    i_clk: input clock,
     /// アクティブハイリセット
-    i_rst        : input  reset,
+    i_rst: input reset,
     /// エッジ検出パルス入力
-    i_edge       : input  logic,
+    i_edge: input logic,
     /// 現在のエッジ間隔時間
-    o_edge_time  : output logic<12>,
+    o_edge_time: output logic<12>,
     /// 最大時間 (同期検出用)
-    o_max_time   : output logic<10>,
+    o_max_time: output logic<10>,
     /// 同期検出フラグ (アクティブハイ=データ期間、ロー=同期期間)
     o_sync_detect: output logic,
     /// フレーム時間
-    o_frame_time : output logic<12>,
+    o_frame_time: output logic<12>,
 ) {
     // エッジ間時間カウンタ
     var cur_time: logic<12>;
@@ -42,11 +42,11 @@ pub module timing_tracker (
     var frame_time: logic<12>;
 
     // 3/4 = 1/2 + 1/4 (バイナリ演算で効率的)
-    assign threshold = (max_time >> 1) + (max_time >> 2);
-    assign o_edge_time = cur_time;
-    assign o_max_time = max_time;
+    assign threshold     = (max_time >> 1) + (max_time >> 2);
+    assign o_edge_time   = cur_time;
+    assign o_max_time    = max_time;
     assign o_sync_detect = sync_mask;
-    assign o_frame_time = frame_time;
+    assign o_frame_time  = frame_time;
 
     // 遷移間時間カウンタと最大時間追跡
     always_ff (i_clk, i_rst) {

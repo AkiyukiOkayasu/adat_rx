@@ -1,41 +1,41 @@
 import adat_pkg::*;
 
 /// 出力インターフェース
-/// 
+///
 /// S/MUX対応、サンプルレート自動検出、ワードクロック生成を行う。
-/// 
+///
 /// # サンプルレート対応
 /// - 48kHz: 8チャンネル出力
 /// - 96kHz: 4チャンネル出力 (S/MUX2 - Ch0+Ch4, Ch1+Ch5, Ch2+Ch6, Ch3+Ch7)
 /// - 192kHz: 2チャンネル出力 (S/MUX4 - Ch0+Ch2+Ch4+Ch6, Ch1+Ch3+Ch5+Ch7)
-/// 
+///
 /// # ワードクロック
 /// フレーム周期の約50%デューティで出力
 pub module output_interface (
     /// システムクロック
-    i_clk        : input  clock,
+    i_clk: input clock,
     /// アクティブハイリセット
-    i_rst        : input  reset,
+    i_rst: input reset,
     /// フレーム時間
-    i_frame_time : input  logic<12>,
+    i_frame_time: input logic<12>,
     /// PCMデータ入力
-    i_data       : input  logic<24>,
+    i_data: input logic<24>,
     /// チャンネル番号
-    i_channel    : input  logic<3>,
+    i_channel: input logic<3>,
     /// データ有効
-    i_data_valid : input  logic,
+    i_data_valid: input logic,
     /// 同期マスク
-    i_sync       : input  logic,
+    i_sync: input logic,
     /// 検出されたサンプルレート
     o_sample_rate: output SampleRate,
     /// ワードクロック出力
-    o_word_clk   : output logic,
+    o_word_clk: output logic,
     /// 8チャンネルPCMデータ出力
-    o_channels   : output logic<24> [8],
+    o_channels: output logic<24> [8],
     /// 全チャンネルデータ有効
-    o_valid      : output logic,
+    o_valid: output logic,
     /// 同期ロック状態
-    o_locked     : output logic,
+    o_locked: output logic,
 ) {
     // サンプルレートレジスタ
     var sample_rate: SampleRate;
@@ -133,7 +133,7 @@ pub module output_interface (
             channels[5] = 24'd0;
             channels[6] = 24'd0;
             channels[7] = 24'd0;
-            valid_out = 1'b0;
+            valid_out   = 1'b0;
         } else if i_data_valid {
             channels[i_channel] = i_data;
             // 最後のチャンネル(7)受信で出力有効

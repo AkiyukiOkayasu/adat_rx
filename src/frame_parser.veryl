@@ -1,36 +1,36 @@
 /// ADATフレームパーサ
-/// 
+///
 /// ビット列からユーザーデータと8チャンネルのPCMデータを抽出する。
 /// 30ビットエンコードから24ビットPCMに変換。
-/// 
+///
 /// # フレーム構造 (256 bits)
 /// ```
 /// [Sync 10bit][1][User 4bit][1][Ch0 30bit][Ch1 30bit]...[Ch7 30bit]
 /// ```
-/// 
+///
 /// # 30bit → 24bit 変換
 /// 各チャンネルは6つの5bitニブルで構成:
 /// - 各ニブル: [D3:D0][sync_bit]
 /// - 24bit = D[23:20] | D[19:16] | D[15:12] | D[11:8] | D[7:4] | D[3:0]
 pub module frame_parser (
     /// システムクロック
-    i_clk       : input  clock,
+    i_clk: input clock,
     /// アクティブハイリセット
-    i_rst       : input  reset,
+    i_rst: input reset,
     /// デコードされたビット列
-    i_bits      : input  logic<5>,
+    i_bits: input logic<5>,
     /// ビット数
-    i_bit_count : input  logic<3>,
+    i_bit_count: input logic<3>,
     /// ビット有効
-    i_valid     : input  logic,
+    i_valid: input logic,
     /// 同期マスク (1=データ期間)
-    i_sync      : input  logic,
+    i_sync: input logic,
     /// ユーザーデータ出力 (4bit)
-    o_user      : output logic<4>,
+    o_user: output logic<4>,
     /// PCMデータ出力 (24bit)
-    o_data      : output logic<24>,
+    o_data: output logic<24>,
     /// チャンネル番号 (0-7)
-    o_channel   : output logic<3>,
+    o_channel: output logic<3>,
     /// データ有効
     o_data_valid: output logic,
 ) {
@@ -39,10 +39,10 @@ pub module frame_parser (
     // 30bitシフトレジスタ
     var shift_reg: logic<30>;
     // 出力レジスタ
-    var r_user   : logic<4>;
+    var r_user   : logic<4> ;
     var r_data   : logic<24>;
-    var r_channel: logic<3>;
-    var r_valid  : logic;
+    var r_channel: logic<3> ;
+    var r_valid  : logic    ;
 
     assign o_user       = r_user;
     assign o_data       = r_data;
@@ -65,11 +65,11 @@ pub module frame_parser (
         } else if i_valid {
             // ビットをシフトレジスタに追加
             case i_bit_count {
-                3'd1: shift_reg = {shift_reg[28:0], i_bits[0]};
-                3'd2: shift_reg = {shift_reg[27:0], i_bits[1:0]};
-                3'd3: shift_reg = {shift_reg[26:0], i_bits[2:0]};
-                3'd4: shift_reg = {shift_reg[25:0], i_bits[3:0]};
-                3'd5: shift_reg = {shift_reg[24:0], i_bits[4:0]};
+                3'd1   : shift_reg = {shift_reg[28:0], i_bits[0]};
+                3'd2   : shift_reg = {shift_reg[27:0], i_bits[1:0]};
+                3'd3   : shift_reg = {shift_reg[26:0], i_bits[2:0]};
+                3'd4   : shift_reg = {shift_reg[25:0], i_bits[3:0]};
+                3'd5   : shift_reg = {shift_reg[24:0], i_bits[4:0]};
                 default: {}
             }
             bit_counter = bit_counter + {5'd0, i_bit_count};
