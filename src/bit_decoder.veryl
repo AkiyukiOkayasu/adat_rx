@@ -1,0 +1,99 @@
+/// NRZIビットデコーダ
+/// 
+/// 遷移間の時間から1〜5ビットをデコードする。
+/// 時間ビニング方式を採用。
+/// 
+/// # NRZIエンコーディング
+/// - 遷移あり = '1'ビット
+/// - 遷移なし = '0'ビット
+/// - 最大5ビット連続（4データビット + 1同期ビット）
+/// 
+/// # 時間ビン
+/// - 0.5〜1.5 bit time → 1 bit ("1")
+/// - 1.5〜2.5 bit time → 2 bits ("01")
+/// - 2.5〜3.5 bit time → 3 bits ("001")
+/// - 3.5〜4.5 bit time → 4 bits ("0001")
+/// - 4.5〜5.5 bit time → 5 bits ("00001")
+pub module bit_decoder (
+    /// システムクロック
+    i_clk       : input  clock,
+    /// アクティブハイリセット
+    i_rst       : input  reset,
+    /// エッジ検出パルス
+    i_edge      : input  logic,
+    /// エッジ間隔時間
+    i_edge_time : input  logic<12>,
+    /// フレーム時間
+    i_frame_time: input  logic<12>,
+    /// 同期マスク (1=データ期間)
+    i_sync_mask : input  logic,
+    /// デコードされたビット列 (LSB aligned)
+    o_bits      : output logic<5>,
+    /// デコードされたビット数 (1-5)
+    o_bit_count : output logic<3>,
+    /// 出力有効
+    o_valid     : output logic,
+) {
+    // ビット時間 = フレーム時間 / 256
+    var bit_time: logic<8>;
+    // 出力レジスタ
+    var r_bits : logic<5>;
+    var r_count: logic<3>;
+    var r_valid: logic;
+
+    // bit_time = frame_time >> 8 (256で割る)
+    // 最小値は常に十分な値になるはず
+    assign bit_time = i_frame_time[11:4];
+
+    assign o_bits = r_bits;
+    assign o_bit_count = r_count;
+    assign o_valid = r_valid;
+
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            r_bits  = 5'b00000;
+            r_count = 3'd0;
+            r_valid = 1'b0;
+        } else if i_edge && i_sync_mask {
+            r_valid = 1'b1;
+            // エッジ間隔をビット時間単位に変換
+            let edge_bits: logic<8> = i_edge_time[11:4];
+            // 閾値計算 (バイナリシフトで効率化)
+            let t1: logic<8> = bit_time + (bit_time >> 1);             // 1.5
+            let t2: logic<8> = (bit_time << 1) + (bit_time >> 1);      // 2.5
+            let t3: logic<8> = (bit_time << 1) + bit_time + (bit_time >> 1);  // 3.5
+            let t4: logic<8> = (bit_time << 2) + (bit_time >> 1);      // 4.5
+
+            // 時間ビンによるビット数判定
+            // NRZIデコード: 遷移で終わる→最後が'1'
+            if edge_bits <= t1 {
+                // 1 bit: "1"
+                r_bits  = 5'b00001;
+                r_count = 3'd1;
+            } else if edge_bits <= t2 {
+                // 2 bits: "01"
+                r_bits  = 5'b00001;
+                r_count = 3'd2;
+            } else if edge_bits <= t3 {
+                // 3 bits: "001"
+                r_bits  = 5'b00001;
+                r_count = 3'd3;
+            } else if edge_bits <= t4 {
+                // 4 bits: "0001"
+                r_bits  = 5'b00001;
+                r_count = 3'd4;
+            } else {
+                // 5 bits: "00001"
+                r_bits  = 5'b00001;
+                r_count = 3'd5;
+            }
+        } else if !i_sync_mask {
+            // 同期期間中はリセット
+            r_bits  = 5'b00000;
+            r_count = 3'd0;
+            r_valid = 1'b0;
+        } else {
+            r_valid = 1'b0;
+        }
+    }
+}

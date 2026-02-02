@@ -1,0 +1,104 @@
+/// タイミング追跡モジュール
+/// 
+/// エッジ間の時間を計測し、最大時間を追跡して同期パターンを検出する。
+/// フレーム時間も計測してビットデコードの基準を提供。
+/// 
+/// # アルゴリズム
+/// 1. エッジ間の時間をカウント
+/// 2. 最大時間を追跡（遅い減衰付き）
+/// 3. 最大時間の3/4を超えたら同期パターンと判定
+/// 4. 同期→同期間の時間をフレーム時間として記録
+pub module timing_tracker (
+    /// システムクロック
+    i_clk        : input  clock,
+    /// アクティブハイリセット
+    i_rst        : input  reset,
+    /// エッジ検出パルス入力
+    i_edge       : input  logic,
+    /// 現在のエッジ間隔時間
+    o_edge_time  : output logic<12>,
+    /// 最大時間 (同期検出用)
+    o_max_time   : output logic<10>,
+    /// 同期検出フラグ (アクティブハイ=データ期間、ロー=同期期間)
+    o_sync_detect: output logic,
+    /// フレーム時間
+    o_frame_time : output logic<12>,
+) {
+    // エッジ間時間カウンタ
+    var cur_time: logic<12>;
+    // 最大時間レジスタ (同期パターン検出用)
+    var max_time: logic<10>;
+    // 最大時間減衰用ウェイトカウンタ
+    var wait_count: logic<16>;
+    // 3/4閾値
+    var threshold: logic<10>;
+    // 同期マスク (1=データ期間、0=同期期間)
+    var sync_mask: logic;
+    // 同期マスクエッジ検出用
+    var sync_ff: logic<2>;
+    // フレーム時間カウンタ
+    var frame_count: logic<12>;
+    // フレーム時間レジスタ
+    var frame_time: logic<12>;
+
+    // 3/4 = 1/2 + 1/4 (バイナリ演算で効率的)
+    assign threshold = (max_time >> 1) + (max_time >> 2);
+    assign o_edge_time = cur_time;
+    assign o_max_time = max_time;
+    assign o_sync_detect = sync_mask;
+    assign o_frame_time = frame_time;
+
+    // 遷移間時間カウンタと最大時間追跡
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            cur_time   = 12'd0;
+            max_time   = 10'h3FF;
+            wait_count = 16'd0;
+        } else if i_edge {
+            // エッジでカウンタをリセット、最大値を更新
+            if cur_time[11:2] >: max_time {
+                max_time = cur_time[11:2];
+            }
+            cur_time = 12'd0;
+        } else {
+            cur_time = cur_time + 12'd1;
+            // 徐々にmax_timeを減少（AGC的動作でジッタに対応）
+            if wait_count == 16'hFFFF {
+                if max_time >: 10'd1 {
+                    max_time = max_time - 10'd1;
+                }
+                wait_count = 16'd0;
+            } else {
+                wait_count = wait_count + 16'd1;
+            }
+        }
+    }
+
+    // 同期検出: 現在時間が閾値以下ならデータ期間
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            sync_mask = 1'b0;
+        } else {
+            sync_mask = cur_time[11:2] <= threshold;
+        }
+    }
+
+    // フレーム時間測定: sync_maskの立ち上がりでキャプチャ
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            sync_ff     = 2'b00;
+            frame_count = 12'd0;
+            frame_time  = 12'd2083;
+        } else {
+            sync_ff[1] = sync_ff[0];
+            sync_ff[0] = sync_mask;
+            // sync_maskの立ち上がりでフレーム時間をキャプチャ
+            if sync_ff == 2'b01 {
+                frame_time  = frame_count;
+                frame_count = 12'd0;
+            } else {
+                frame_count = frame_count + 12'd1;
+            }
+        }
+    }
+}

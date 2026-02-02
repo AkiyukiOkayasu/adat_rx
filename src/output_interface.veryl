@@ -1,0 +1,145 @@
+import adat_pkg::*;
+
+/// 出力インターフェース
+/// 
+/// S/MUX対応、サンプルレート自動検出、ワードクロック生成を行う。
+/// 
+/// # サンプルレート対応
+/// - 48kHz: 8チャンネル出力
+/// - 96kHz: 4チャンネル出力 (S/MUX2 - Ch0+Ch4, Ch1+Ch5, Ch2+Ch6, Ch3+Ch7)
+/// - 192kHz: 2チャンネル出力 (S/MUX4 - Ch0+Ch2+Ch4+Ch6, Ch1+Ch3+Ch5+Ch7)
+/// 
+/// # ワードクロック
+/// フレーム周期の約50%デューティで出力
+pub module output_interface (
+    /// システムクロック
+    i_clk        : input  clock,
+    /// アクティブハイリセット
+    i_rst        : input  reset,
+    /// フレーム時間
+    i_frame_time : input  logic<12>,
+    /// PCMデータ入力
+    i_data       : input  logic<24>,
+    /// チャンネル番号
+    i_channel    : input  logic<3>,
+    /// データ有効
+    i_data_valid : input  logic,
+    /// 同期マスク
+    i_sync       : input  logic,
+    /// 検出されたサンプルレート
+    o_sample_rate: output SampleRate,
+    /// ワードクロック出力
+    o_word_clk   : output logic,
+    /// 8チャンネルPCMデータ出力
+    o_channels   : output logic<24> [8],
+    /// 全チャンネルデータ有効
+    o_valid      : output logic,
+    /// 同期ロック状態
+    o_locked     : output logic,
+) {
+    // サンプルレートレジスタ
+    var sample_rate: SampleRate;
+    // ワードクロックカウンタ
+    var word_clk_cnt: logic<12>;
+    // ワードクロック出力
+    var word_clk: logic;
+    // チャンネルデータバッファ
+    var channels: logic<24> [8];
+    // 出力有効
+    var valid_out: logic;
+    // ロック状態
+    var locked: logic;
+    // フレームカウンタ（ロック検出用）
+    var frame_cnt: logic<4>;
+
+    assign o_sample_rate = sample_rate;
+    assign o_word_clk    = word_clk;
+    assign o_valid       = valid_out;
+    assign o_locked      = locked;
+
+    // チャンネル出力割り当て
+    for i in 0..8 :g_ch_out {
+        assign o_channels[i] = channels[i];
+    }
+
+    // サンプルレート検出
+    // フレーム時間から判定（ヒステリシス付き）
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            sample_rate = SampleRate::Rate48kHz;
+        } else {
+            if i_frame_time >: 12'd1500 {
+                sample_rate = SampleRate::Rate48kHz;
+            } else if i_frame_time >: 12'd750 {
+                sample_rate = SampleRate::Rate96kHz;
+            } else {
+                sample_rate = SampleRate::Rate192kHz;
+            }
+        }
+    }
+
+    // ロック検出
+    // 数フレーム連続で同期が取れたらロック
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            frame_cnt = 4'd0;
+            locked    = 1'b0;
+        } else if !i_sync {
+            // 同期外れたらカウントダウン
+            if frame_cnt >: 4'd0 {
+                frame_cnt = frame_cnt - 4'd1;
+            }
+            if frame_cnt == 4'd0 {
+                locked = 1'b0;
+            }
+        } else if i_data_valid && i_channel == 3'd7 {
+            // 最後のチャンネル受信でカウントアップ
+            if frame_cnt <: 4'd15 {
+                frame_cnt = frame_cnt + 4'd1;
+            }
+            if frame_cnt >= 4'd4 {
+                locked = 1'b1;
+            }
+        }
+    }
+
+    // ワードクロック生成
+    // フレーム時間の約50%デューティ
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            word_clk_cnt = 12'd0;
+            word_clk     = 1'b0;
+        } else if !i_sync {
+            word_clk_cnt = 12'd0;
+            word_clk     = 1'b1;
+        } else {
+            word_clk_cnt = word_clk_cnt + 12'd1;
+            if word_clk_cnt >: (i_frame_time >> 1) {
+                word_clk = 1'b0;
+            } else {
+                word_clk = 1'b1;
+            }
+        }
+    }
+
+    // チャンネルデータ格納
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            channels[0] = 24'd0;
+            channels[1] = 24'd0;
+            channels[2] = 24'd0;
+            channels[3] = 24'd0;
+            channels[4] = 24'd0;
+            channels[5] = 24'd0;
+            channels[6] = 24'd0;
+            channels[7] = 24'd0;
+            valid_out = 1'b0;
+        } else if i_data_valid {
+            channels[i_channel] = i_data;
+            // 最後のチャンネル(7)受信で出力有効
+            valid_out = i_channel == 3'd7;
+        } else {
+            valid_out = 1'b0;
+        }
+    }
+}

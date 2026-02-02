@@ -1,0 +1,135 @@
+/// ADATフレームパーサ
+/// 
+/// ビット列からユーザーデータと8チャンネルのPCMデータを抽出する。
+/// 30ビットエンコードから24ビットPCMに変換。
+/// 
+/// # フレーム構造 (256 bits)
+/// ```
+/// [Sync 10bit][1][User 4bit][1][Ch0 30bit][Ch1 30bit]...[Ch7 30bit]
+/// ```
+/// 
+/// # 30bit → 24bit 変換
+/// 各チャンネルは6つの5bitニブルで構成:
+/// - 各ニブル: [D3:D0][sync_bit]
+/// - 24bit = D[23:20] | D[19:16] | D[15:12] | D[11:8] | D[7:4] | D[3:0]
+pub module frame_parser (
+    /// システムクロック
+    i_clk       : input  clock,
+    /// アクティブハイリセット
+    i_rst       : input  reset,
+    /// デコードされたビット列
+    i_bits      : input  logic<5>,
+    /// ビット数
+    i_bit_count : input  logic<3>,
+    /// ビット有効
+    i_valid     : input  logic,
+    /// 同期マスク (1=データ期間)
+    i_sync      : input  logic,
+    /// ユーザーデータ出力 (4bit)
+    o_user      : output logic<4>,
+    /// PCMデータ出力 (24bit)
+    o_data      : output logic<24>,
+    /// チャンネル番号 (0-7)
+    o_channel   : output logic<3>,
+    /// データ有効
+    o_data_valid: output logic,
+) {
+    // フレーム内ビットカウンタ
+    var bit_counter: logic<8>;
+    // 30bitシフトレジスタ
+    var shift_reg: logic<30>;
+    // 出力レジスタ
+    var r_user   : logic<4>;
+    var r_data   : logic<24>;
+    var r_channel: logic<3>;
+    var r_valid  : logic;
+
+    assign o_user       = r_user;
+    assign o_data       = r_data;
+    assign o_channel    = r_channel;
+    assign o_data_valid = r_valid;
+
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            bit_counter = 8'd0;
+            shift_reg   = 30'd0;
+            r_user      = 4'd0;
+            r_data      = 24'd0;
+            r_channel   = 3'd0;
+            r_valid     = 1'b0;
+        } else if !i_sync {
+            // 同期期間: カウンタリセット
+            bit_counter = 8'd0;
+            shift_reg   = 30'd0;
+            r_valid     = 1'b0;
+        } else if i_valid {
+            // ビットをシフトレジスタに追加
+            case i_bit_count {
+                3'd1: shift_reg = {shift_reg[28:0], i_bits[0]};
+                3'd2: shift_reg = {shift_reg[27:0], i_bits[1:0]};
+                3'd3: shift_reg = {shift_reg[26:0], i_bits[2:0]};
+                3'd4: shift_reg = {shift_reg[25:0], i_bits[3:0]};
+                3'd5: shift_reg = {shift_reg[24:0], i_bits[4:0]};
+                default: {}
+            }
+            bit_counter = bit_counter + {5'd0, i_bit_count};
+
+            // 各位置でデータ抽出
+            // ユーザーデータ: bit 5
+            // チャンネル: bit 35, 65, 95, 125, 155, 185, 215, 245
+            case bit_counter {
+                8'd5: {
+                    r_user  = shift_reg[3:0];
+                    r_valid = 1'b0;
+                }
+                8'd35: {
+                    // 30bit -> 24bit: 各5bitから上位4bitを抽出
+                    // shift_reg[29:26], [24:21], [19:16], [14:11], [9:6], [4:1]
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd0;
+                    r_valid   = 1'b1;
+                }
+                8'd65: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd1;
+                    r_valid   = 1'b1;
+                }
+                8'd95: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd2;
+                    r_valid   = 1'b1;
+                }
+                8'd125: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd3;
+                    r_valid   = 1'b1;
+                }
+                8'd155: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd4;
+                    r_valid   = 1'b1;
+                }
+                8'd185: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd5;
+                    r_valid   = 1'b1;
+                }
+                8'd215: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd6;
+                    r_valid   = 1'b1;
+                }
+                8'd245: {
+                    r_data    = {shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6], shift_reg[4:1]};
+                    r_channel = 3'd7;
+                    r_valid   = 1'b1;
+                }
+                default: {
+                    r_valid = 1'b0;
+                }
+            }
+        } else {
+            r_valid = 1'b0;
+        }
+    }
+}
