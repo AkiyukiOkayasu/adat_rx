@@ -7,9 +7,6 @@
 #   make wave   - 波形表示 (GTKWave)
 #   make clean  - クリーンアップ
 
-# システムのPython3を優先的に使用
-export PATH := /opt/homebrew/bin:/usr/bin:$(PATH)
-
 PROJ_ROOT := ../..
 TARGET := target
 SRC_DIR := $(PROJ_ROOT)/src
