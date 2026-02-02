@@ -7,3 +7,4 @@
 # Verilator
 obj_dir/
 doc
+.DS_Store
