@@ -37,6 +37,28 @@ just fmt
 svls
 ```
 
+## 波形デバッグ
+
+GTKWaveはmacOSで問題があるため、**Surfer**を使用します。
+
+```bash
+# インストール
+brew install surfer
+
+# シミュレーション実行（VCD出力付き）
+cd sim/verilator
+just run-trace
+
+# Surferで波形表示
+surfer adat_rx.vcd
+```
+
+またはシミュレーション後に自動でSurferを起動:
+```bash
+cd sim/verilator
+just wave
+```
+
 ## ドキュメント
 
 Verylのドキュメンテーションコメントでは Wavedrom を使用できます。

@@ -126,13 +126,37 @@ module tb_adat_rx;
         // 連続フレーム送信を開始（startを保持すると連続生成される）
         gen_start = 1;
         
-        // 複数フレーム送信 (ロックに十分なフレーム数)
-        repeat (10) begin
-            @(posedge gen_done);
-            #10;
-            frame_count++;
-            $display("Frame %0d generated", frame_count);
-        end
+        // 最初のフレーム送信時にエッジ検出をモニター
+        $display("\n--- Monitoring first frame ---");
+        fork
+            begin
+                // エッジ検出カウンター
+                int edge_count = 0;
+                int timeout = 0;
+                while (edge_count < 20 && timeout < 10000) begin
+                    @(posedge clk);
+                    timeout++;
+                    if (dbg_adat_edge) begin
+                        edge_count++;
+                        if (edge_count <= 5) begin
+                            $display("Edge %0d detected at time %0t: adat_in=%b, synced=%b", 
+                                     edge_count, $time, adat_in, dbg_adat_synced);
+                        end
+                    end
+                end
+                $display("Total edges detected in first frame attempt: %0d", edge_count);
+            end
+            begin
+                // 通常のフレーム完了待ち
+                repeat (10) begin
+                    @(posedge gen_done);
+                    #10;
+                    frame_count++;
+                    $display("Frame %0d completed", frame_count);
+                end
+            end
+        join_any
+        disable fork;
         
         // ロック確認
         #100;
@@ -216,7 +240,7 @@ module tb_adat_rx;
     
     // 波形ダンプ
     initial begin
-        $dumpfile("adat_rx.vcd");
+        $dumpfile("adat_rx.fst");
         $dumpvars(0, tb_adat_rx);
     end
 
