@@ -6,32 +6,55 @@ ADAT光信号を受信し、8チャンネル24ビットPCMデータをデコー�
 
 ## 現在の問題
 
-**ステータス**: レシーバーがロックできない（frame_timeは安定、data_validが出ない）
+**ステータス**: ✅ 解決済み - 全テストパス
 
-### 症状
+### 解決内容（2026-02-04）
 
-最新のシミュレーション実行時、以下のエラーが発生：
+1. **テストベンチの早期終了問題**
+   - `fork/join_any` を `fork...join_none` + メインスレッドでのフレーム待ちに変更
+   - 10フレーム分のシミュレーション完了を確認
+
+2. **ユーザーデータのビット順反転**
+   - `frame_parser` の user 抽出を `{shift_next[0], shift_next[1], shift_next[2], shift_next[3]}` に修正
+   - `0xA` が正しく抽出されるようになった
+
+### テスト結果
 
 ```
-=== Debug Info ===
-adat_in: 1
-ADAT edge: 0, Synced: 1
-Frame time: 2083 (expected ~2083)
-Max time: 25
-Sync detect: 1
-Bits valid: 1, Bit count: 1, Bits: 00001
-Bit counter: 37, Shift reg: 194e95b5
-Data valid: 0, Channel: 0
-Frame cnt: 0
-Locked: 0
-FAIL: Receiver not locked
+just run        → TEST PASSED（8チャンネル全て一致、user一致）
+just unit-tests → 全5テストPASS
 ```
 
-### 主要な問題点
+### 以前の根本原因（参考）
 
-1. **data_validが出ない**（frame_parserで抽出位置に到達していない）
-2. **bit_counterが37で停止**（フレーム全体に到達しない）
-3. **frame_parserの単体テストが不一致**（user/data抽出に失敗）
+**テストベンチの `fork/join_any` による早期終了**
+
+問題箇所（`tests/tb_adat_rx.sv` 156-184行）:
+```systemverilog
+fork
+    begin
+        // エッジ検出カウンター - 20エッジで終了
+        while (edge_count < 20 && timeout < 10000) ...
+    end
+    begin
+        // フレーム完了待ち - 10フレーム
+        repeat (10) @(posedge gen_done);
+    end
+join_any       // ← どちらかが終わると即座にreturn
+disable fork;  // ← フレーム完了待ちをkill
+```
+
+**問題の流れ**:
+1. 20エッジ検出（約37ビット分）でエッジモニタが終了
+2. `join_any` により即座にforkブロックを抜ける
+3. `disable fork` でフレーム完了待ちスレッドが強制終了
+4. 1フレーム（256ビット）も完了していない状態でロック確認
+5. 当然ロックできずFAIL
+
+**計測値による裏付け**:
+- `bits_valid_count: 19` (1フレームには約100回以上必要)
+- `bit_counter: 37` (1フレームは256ビット)
+- `boundary_pass: ch0=1, ch1-7=0` (チャンネル0境界のみ通過)
 
 ## 検証済み事項
 
@@ -82,22 +105,17 @@ Ch0: bit 35 ...（現在調整中）
 
 ### SV Lint結果
 
-**ツール**: svls 0.2.14
+**ツール**: Verilator 5.044 (`--lint-only -Wall`)
 
-**重要な警告**:
-1. **adat_generator.sv:111** - WIDTHEXPAND
-   - 8-bit `clk_counter` vs 32-bit 比較
-   
-2. **tb_adat_rx.sv:207** - WIDTHTRUNC
-   - `test_pass` (int/32-bit) を1-bitとして使用
+**2026-02-04 更新**: 11件の警告（全て軽微、機能に影響なし）
 
-3. **timescale不一致** - 7件
-   - 設計モジュールに`timescale`宣言がない
-   - テストベンチのみ`1ns/1ps`を宣言
+| カテゴリ | 件数 | 内容 |
+|----------|------|------|
+| WIDTHTRUNC | 2 | `bit_decoder` の幅切り詰め |
+| UNUSEDSIGNAL | 4 | デバッグ用の未使用信号 (`synced`, `max_time` 等) |
+| UNUSEDPARAM | 5 | 将来の拡張用パラメータ (`FRAME_TIME_*`, `RATE_THRESHOLD_*`) |
 
-4. **未使用信号** - 複数件
-   - `tb_adat_rx.sv`: `word_clk`, `sample_rate`
-   - `adat_generator.sv`: `next_state`, `nibble_counter`, `channel_counter`, `channel_encoded`
+**注記**: DECLFILENAME警告はVerylのモジュール命名規則によるもの（`adat_rx_`プレフィックス）。無視可。
 
 ## デバッグ中の理論
 
@@ -116,6 +134,38 @@ bit_decoderが出すビット列（LSB aligned）とframe_parserのシフト順�
 
 3. **統合テスト再実行**
    - `just run` でlock判定まで通るか確認
+
+## bit_counter デバッグ手順
+
+### 目的
+
+`bit_counter` が 256 まで進まず停止する原因を特定する。
+
+### 手順
+
+1. **bit_count分布の計測**
+   - `tb_adat_rx.sv` に `bit_count` のヒストグラムカウンタを追加
+   - 1フレーム内での `bit_count` 合計が 256 に近いか確認
+
+2. **bits_validパルス数の計測**
+   - `bits_valid` の立ち上がり回数を1フレーム内でカウント
+   - 期待値（フレーム内のエッジ数）と比較
+
+3. **sync境界の確認**
+   - `sync_detect` が 0/1 になるタイミングを波形で確認
+   - `frame_parser` が途中でリセットされていないかを確認
+
+4. **edge_timeとbit_timeの比率確認**
+   - `edge_time`, `bit_time`, `t1..t4` をログ出力
+   - 実データでの `bit_count` 判定が妥当か確認
+
+5. **境界到達の確認**
+   - `bit_counter` が 35/65/95/…/245 を超えた回数をカウント
+   - どの境界で止まるかを特定
+
+6. **修正後の再テスト**
+   - `just run` → `just run-trace` の順で確認
+   - 改善がなければ `bit_decoder` のしきい値と `sync_detect` 判定を再調整
 
 ## 参考資料
 
