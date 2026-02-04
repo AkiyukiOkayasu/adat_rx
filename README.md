@@ -4,7 +4,7 @@ ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号
 
 ## プロジェクト状況
 
-**現在のステータス**: デバッグ中 - レシーバーがロックできない問題を調査中
+**現在のステータス**: デバッグ中 - frame_parserのビット順整合が未解決
 
 詳細なデバッグ状況は `debug_log.md` を参照してください。
 
@@ -45,12 +45,12 @@ GTKWaveはmacOSで問題があるため、**Surfer**を使用します。
 # インストール
 brew install surfer
 
-# シミュレーション実行（VCD出力付き）
+# シミュレーション実行（FST出力付き）
 cd sim/verilator
 just run-trace
 
 # Surferで波形表示
-surfer adat_rx.vcd
+surfer /Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fst
 ```
 
 またはシミュレーション後に自動でSurferを起動:

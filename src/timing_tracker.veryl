@@ -34,6 +34,8 @@ pub module timing_tracker (
 ) {
     // エッジ間時間カウンタ
     var cur_time: logic<12>;
+    // 直前のエッジ間隔時間
+    var edge_time: logic<12>;
     // 最大時間レジスタ (同期パターン検出用)
     var max_time: logic<10>;
     // 最大時間減衰用ウェイトカウンタ
@@ -46,12 +48,14 @@ pub module timing_tracker (
     var sync_ff: logic<2>;
     // フレーム時間カウンタ
     var frame_count: logic<12>;
+    // 初回同期検出フラグ
+    var have_prev_sync: logic;
     // フレーム時間レジスタ
     var frame_time: logic<12>;
 
     // 3/4 = 1/2 + 1/4 (バイナリ演算で効率的)
     assign threshold     = (max_time >> 1) + (max_time >> 2);
-    assign o_edge_time   = cur_time;
+    assign o_edge_time   = edge_time;
     assign o_max_time    = max_time;
     assign o_sync_detect = sync_mask;
     assign o_frame_time  = frame_time;
@@ -59,7 +63,8 @@ pub module timing_tracker (
     // 遷移間時間カウンタと最大時間追跡
     always_ff (i_clk, i_rst) {
         if_reset {
-            cur_time = 12'd0;
+            cur_time  = 12'd0;
+            edge_time = 12'd0;
             // 初期値を「8クロック/bit × 5ビット = 40クロック」に設定
             // これにより、5ビットまでのデータ期間はsync_mask=1、同期期間はsync_mask=0になる
             // 40/4 = 10、threshold = 10 * 0.75 = 7.5 → 7
@@ -71,6 +76,7 @@ pub module timing_tracker (
             wait_count = 16'd0;
         } else if i_edge {
             // エッジでカウンタをリセット、最大値を更新
+            edge_time = cur_time;
             if cur_time[11:2] >: max_time {
                 max_time = cur_time[11:2];
             }
@@ -89,11 +95,12 @@ pub module timing_tracker (
         }
     }
 
-    // 同期検出: 現在時間が閾値以下ならデータ期間
+    // 同期検出: エッジ間隔が閾値以下ならデータ期間
+    // エッジ到来時に判定し、次のエッジまで保持
     always_ff (i_clk, i_rst) {
         if_reset {
             sync_mask = 1'b0;
-        } else {
+        } else if i_edge {
             sync_mask = cur_time[11:2] <= threshold;
         }
     }
@@ -101,15 +108,20 @@ pub module timing_tracker (
     // フレーム時間測定: sync_maskの立ち上がりでキャプチャ
     always_ff (i_clk, i_rst) {
         if_reset {
-            sync_ff     = 2'b00;
-            frame_count = 12'd0;
-            frame_time  = 12'd2083;
+            sync_ff        = 2'b00;
+            frame_count    = 12'd0;
+            frame_time     = 12'd2083;
+            have_prev_sync = 1'b0;
         } else {
             sync_ff[1] = sync_ff[0];
             sync_ff[0] = sync_mask;
-            // sync_maskの立ち上がりでフレーム時間をキャプチャ
-            if sync_ff == 2'b01 {
-                frame_time  = frame_count;
+            // sync間隔(長いエッジ間隔)の終了時にフレーム時間をキャプチャ
+            if i_edge && (cur_time[11:2] >: threshold) {
+                if have_prev_sync {
+                    frame_time = frame_count;
+                } else {
+                    have_prev_sync = 1'b1;
+                }
                 frame_count = 12'd0;
             } else {
                 frame_count = frame_count + 12'd1;

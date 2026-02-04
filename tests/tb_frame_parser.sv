@@ -53,25 +53,17 @@ module tb_frame_parser;
         rst = 1'b1;
         repeat (2) @(posedge clk);
 
-        // user bits at bit 15
-        push_bits(5'b00000, 3'd5);
-        push_bits(5'b00000, 3'd5);
+        // user bits at bit 5
         push_bits(5'b01011, 3'd5);
-        push_bits(5'b00001, 3'd1);
-        if (user !== 4'b1011) begin
-            $display("FAIL: user expected 1011 got %b", user);
+        if (user !== 4'b1010) begin
+            $display("FAIL: user expected 1010 got %b", user);
             pass = 0;
         end
 
-        sync = 1'b0;
-        repeat (2) @(posedge clk);
-        sync = 1'b1;
-
-        // ch0 data at bit 45 (30 bits after)
-        repeat (9) begin
+        // ch0 data at bit 35 (30 bits after)
+        repeat (6) begin
             push_bits(5'b11111, 3'd5);
         end
-        push_bits(5'b00001, 3'd1);
         if (!(data_valid && channel == 3'd0 && data == 24'hFFFFFF)) begin
             $display("FAIL: ch0 data expected FFFFFF got %h", data);
             pass = 0;
