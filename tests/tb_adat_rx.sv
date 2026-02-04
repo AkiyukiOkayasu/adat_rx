@@ -91,10 +91,30 @@ module tb_adat_rx;
     assign dbg_data_valid = u_dut.data_valid;
     assign dbg_frame_cnt = u_dut.u_output_interface.frame_cnt;
     
+    // Metrics collection
+    /* verilator lint_off BLKSEQ */
+    always @(posedge clk) begin
+        if (dbg_bits_valid) begin
+            bits_valid_count++;
+            if (dbg_bit_count >= 1 && dbg_bit_count <= 5)
+                bit_count_hist[dbg_bit_count]++;
+        end
+        if (dbg_data_valid) begin
+            if (dbg_channel <= 7)
+                boundary_pass[dbg_channel]++;
+        end
+    end
+    /* verilator lint_on BLKSEQ */
+    
     int frame_count;
     int error_count;
     int test_pass;
     logic got_valid;
+    
+    // Metrics counters
+    int bits_valid_count;
+    int bit_count_hist [0:5];  // index 0 unused, 1-5 for bit counts
+    int boundary_pass [0:7];   // boundary crossing counts for each channel
     
     initial begin
         $display("Clock: 100MHz, Sample Rate: 48kHz");
@@ -106,6 +126,11 @@ module tb_adat_rx;
         frame_count = 0;
         error_count = 0;
         test_pass = 1;
+        
+        // Metrics initialization
+        bits_valid_count = 0;
+        for (int i = 0; i <= 5; i++) bit_count_hist[i] = 0;
+        for (int i = 0; i <= 7; i++) boundary_pass[i] = 0;
         
         // テストデータ設定
         test_user = 4'hA;
@@ -126,14 +151,14 @@ module tb_adat_rx;
         // 連続フレーム送信を開始（startを保持すると連続生成される）
         gen_start = 1;
         
-        // 最初のフレーム送信時にエッジ検出をモニター
+        // 最初のフレーム送信時にエッジ検出をモニター（非ブロッキング）
         $display("\n--- Monitoring first frame ---");
         fork
             begin
-                // エッジ検出カウンター
+                // エッジ検出モニター（join_noneで非ブロッキング実行）
                 int edge_count = 0;
                 int timeout = 0;
-                while (edge_count < 20 && timeout < 10000) begin
+                while (edge_count < 100 && timeout < 50000) begin
                     @(posedge clk);
                     timeout++;
                     if (dbg_adat_edge) begin
@@ -144,22 +169,32 @@ module tb_adat_rx;
                         end
                     end
                 end
-                $display("Total edges detected in first frame attempt: %0d", edge_count);
+                $display("Total edges detected: %0d", edge_count);
             end
-            begin
-                // 通常のフレーム完了待ち
-                repeat (10) begin
-                    @(posedge gen_done);
-                    #10;
-                    frame_count++;
-                    $display("Frame %0d completed", frame_count);
-                end
-            end
-        join_any
+        join_none
+        
+        // フレーム完了を待つ（メインスレッドで実行）
+        repeat (10) begin
+            @(posedge gen_done);
+            #10;
+            frame_count++;
+            $display("Frame %0d completed", frame_count);
+        end
+        
+        // エッジモニタを停止
         disable fork;
         
         // ロック確認
         #100;
+        
+        $display("\n=== Metrics ===");
+        $display("bits_valid_count: %0d", bits_valid_count);
+        $display("bit_count_hist: 1bit=%0d, 2bit=%0d, 3bit=%0d, 4bit=%0d, 5bit=%0d",
+                 bit_count_hist[1], bit_count_hist[2], bit_count_hist[3],
+                 bit_count_hist[4], bit_count_hist[5]);
+        $display("boundary_pass: ch0=%0d, ch1=%0d, ch2=%0d, ch3=%0d, ch4=%0d, ch5=%0d, ch6=%0d, ch7=%0d",
+                 boundary_pass[0], boundary_pass[1], boundary_pass[2], boundary_pass[3],
+                 boundary_pass[4], boundary_pass[5], boundary_pass[6], boundary_pass[7]);
         
         // Debug output
         $display("\n=== Debug Info ===");
