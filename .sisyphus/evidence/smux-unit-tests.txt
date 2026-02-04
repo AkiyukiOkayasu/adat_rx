@@ -1,0 +1,91 @@
+cd ../.. && veryl fmt
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/adat_pkg.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/adat_rx.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/bit_decoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/edge_detector.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/frame_parser.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/output_interface.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/timing_tracker.veryl)
+cd ../.. && veryl build
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/adat_pkg.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/adat_rx.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/bit_decoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/edge_detector.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/frame_parser.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/output_interface.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/src/timing_tracker.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/async_fifo/async_fifo.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/async_fifo/async_fifo_pkg.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/async_fifo/async_fifo_reset_sync.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/async_handshake/async_handshake.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/axi_if/axi_if.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/axi_if/axi_pkg.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/binary_enc_dec/binary_decoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/binary_enc_dec/binary_encoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/coding/linear_sec_decoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/coding/linear_sec_encoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/coding/test_linear_sec.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/counter/counter.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/countones/countones.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/countones/onehot.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/delay/delay.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/edge_detector/edge_detector.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/fifo/fifo.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/fifo/fifo_controller.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/gray/gray_counter.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/gray/gray_decoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/gray/gray_encoder.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/lfsr/lfsr_galois.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/pkg/types.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/ram/ram.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/selector/demux.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/selector/mux.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/selector/selector_pkg.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/selector/test_selector.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/slicer/slicer.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/slicer/slicer_unit_fb.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/slicer/slicer_unit_hb.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/synchronizer/synchronizer.veryl)
+[INFO ]   Processing file (/Users/akiyuki/Library/Caches/org.veryl-lang.veryl/std/a3a4d148de2d3d29212868cd267c76b84bd0d71675ed8ba5fc85c3698e7ed112/synchronizer/synchronizer_basic.veryl)
+[INFO ]       Output filelist (/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/adat_rx.f)
+make: Nothing to be done for `default'.
+- V e r i l a t i o n   R e p o r t: Verilator 5.044 2026-01-01 rev vUNKNOWN-built20260101
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.024 s (elab=0.000, cvt=0.000, bld=0.023); cpu 0.001 s on 8 threads; alloced 2.984 MB
+-Info: ../../tests/tb_edge_detector.sv:64: $dumpvar ignored, as Verilated without --trace
+*** TEST PASSED ***
+- ../../tests/tb_edge_detector.sv:59: Verilog $finish
+make: Nothing to be done for `default'.
+- V e r i l a t i o n   R e p o r t: Verilator 5.044 2026-01-01 rev vUNKNOWN-built20260101
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.024 s (elab=0.000, cvt=0.000, bld=0.023); cpu 0.001 s on 8 threads; alloced 3.016 MB
+-Info: ../../tests/tb_timing_tracker.sv:76: $dumpvar ignored, as Verilated without --trace
+*** TEST PASSED ***
+- ../../tests/tb_timing_tracker.sv:71: Verilog $finish
+make: Nothing to be done for `default'.
+- V e r i l a t i o n   R e p o r t: Verilator 5.044 2026-01-01 rev vUNKNOWN-built20260101
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.021 s (elab=0.000, cvt=0.000, bld=0.020); cpu 0.001 s on 8 threads; alloced 2.984 MB
+-Info: ../../tests/tb_bit_decoder.sv:90: $dumpvar ignored, as Verilated without --trace
+*** TEST PASSED ***
+- ../../tests/tb_bit_decoder.sv:85: Verilog $finish
+make: Nothing to be done for `default'.
+- V e r i l a t i o n   R e p o r t: Verilator 5.044 2026-01-01 rev vUNKNOWN-built20260101
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.019 s (elab=0.000, cvt=0.000, bld=0.019); cpu 0.001 s on 8 threads; alloced 2.984 MB
+-Info: ../../tests/tb_frame_parser.sv:165: $dumpvar ignored, as Verilated without --trace
+=== Bit Order Verification ===
+PASS: bit-order test
+*** TEST PASSED ***
+- ../../tests/tb_frame_parser.sv:160: Verilog $finish
+make: Nothing to be done for `default'.
+- V e r i l a t i o n   R e p o r t: Verilator 5.044 2026-01-01 rev vUNKNOWN-built20260101
+- Verilator: Built from 0.000 MB sources in 0 modules, into 0.000 MB in 0 C++ files needing 0.000 MB
+- Verilator: Walltime 0.020 s (elab=0.000, cvt=0.000, bld=0.019); cpu 0.001 s on 8 threads; alloced 3.047 MB
+-Info: ../../tests/tb_output_interface.sv:141: $dumpvar ignored, as Verilated without --trace
+Testing 96kHz detection...
+PASS: 96kHz detected correctly
+Testing 192kHz detection...
+PASS: 192kHz detected correctly
+*** TEST PASSED ***
+- ../../tests/tb_output_interface.sv:136: Verilog $finish

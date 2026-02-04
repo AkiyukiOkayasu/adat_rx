@@ -59,9 +59,6 @@ svls
 GTKWaveはmacOSで問題があるため、**Surfer**を使用します。
 
 ```sh
-# インストール
-brew install surfer
-
 # シミュレーション実行（FST出力付き）
 cd sim/verilator
 just run-trace
@@ -76,19 +73,6 @@ surfer /Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fs
 cd sim/verilator
 just wave
 ```
-
-## ドキュメント
-
-Verylのドキュメンテーションコメントでは Wavedrom を使用できます。
-`src/adat_rx.veryl` の例に倣い、以下のように `wavedrom` フェンスを使います。
-
-```veryl
-/// ```wavedrom
-/// { "signal": [ {"name": "clk", "wave": "P....."} ] }
-/// ```
-```
-
-生成済みHTMLドキュメントは `doc/` に配置されています。
 
 ## 参考
 
