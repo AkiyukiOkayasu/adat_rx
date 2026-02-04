@@ -11,15 +11,19 @@
 ## 現在の状況
 
 ### 実装完了済み
-- `justfile`によるタスク管理（Makefile完全移行済み）
+
+- `justfile`によるタスク管理
 - 全モジュールのwavedromドキュメント追加
 - `sim/verilator/justfile`に`veryl fmt`自動実行設定済み
+- `sim/verilator/justfile`にユニットテスト一括タスク追加
 
 ### デバッグ中の問題
+
 - シミュレーション: レシーバーがロックできない
 - 詳細は`debug_log.md`を参照
 
 ### 未完了タスク
+
 - 厳密比較テストのパス（データデコード問題）
 - frame_parserのビット順整合
 - SV lint警告の修正（任意）

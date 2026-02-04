@@ -1,13 +1,11 @@
 # ADAT Receiver Verilator justfile
 #
 # 使用方法:
-#   just           - ビルドと実行
-#   just build     - ビルドのみ
-#   just run       - 実行
-#   just run-trace - 実行（VCDトレース出力付き）
+#   just           - ビルドと実行(トレースなし)
+#   just run       - ビルドと実行(トレースなし)
+#   just run-trace - ビルドと実行（FSTトレース出力付き）
 #   just wave      - 波形表示 (Surfer)
 #   just clean     - クリーンアップ
-#   just fmt       - Verylフォーマット
 
 PROJ_ROOT := "../.."
 OBJ_DIR := "obj_dir"
@@ -16,7 +14,7 @@ VERILATOR := "verilator"
 VERILATOR_FLAGS := "--cc --exe --build -j 0 -Wall -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-TIMESCALEMOD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC --timing"
 VERILATOR_TRACE_FLAGS := "--cc --exe --build -j 0 -Wall -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-TIMESCALEMOD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC --timing --trace-fst"
 
-all: run
+default: run
 
 # Verylフォーマット
 fmt:
@@ -34,93 +32,13 @@ build: veryl
 build-trace: veryl
   {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_adat_rx -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv {{PROJ_ROOT}}/target/edge_detector.sv {{PROJ_ROOT}}/target/timing_tracker.sv {{PROJ_ROOT}}/target/bit_decoder.sv {{PROJ_ROOT}}/target/frame_parser.sv {{PROJ_ROOT}}/target/output_interface.sv {{PROJ_ROOT}}/target/adat_rx.sv sim_main.cpp
 
-# Verilatorビルド（edge_detector単体）
-build-edge: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_edge_detector -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_edge_detector.sv {{PROJ_ROOT}}/target/edge_detector.sv sim_main_edge.cpp
-
-# Verilatorビルド（edge_detector単体, トレース付き）
-build-edge-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_edge_detector -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_edge_detector.sv {{PROJ_ROOT}}/target/edge_detector.sv sim_main_edge.cpp
-
-# Verilatorビルド（timing_tracker単体）
-build-timing: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_timing_tracker -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_timing_tracker.sv {{PROJ_ROOT}}/target/timing_tracker.sv sim_main_timing.cpp
-
-# Verilatorビルド（timing_tracker単体, トレース付き）
-build-timing-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_timing_tracker -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_timing_tracker.sv {{PROJ_ROOT}}/target/timing_tracker.sv sim_main_timing.cpp
-
-# Verilatorビルド（bit_decoder単体）
-build-bit: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_bit_decoder -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_bit_decoder.sv {{PROJ_ROOT}}/target/bit_decoder.sv sim_main_bit.cpp
-
-# Verilatorビルド（bit_decoder単体, トレース付き）
-build-bit-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_bit_decoder -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_bit_decoder.sv {{PROJ_ROOT}}/target/bit_decoder.sv sim_main_bit.cpp
-
-# Verilatorビルド（frame_parser単体）
-build-frame: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_frame_parser -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_frame_parser.sv {{PROJ_ROOT}}/target/frame_parser.sv sim_main_frame.cpp
-
-# Verilatorビルド（frame_parser単体, トレース付き）
-build-frame-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_frame_parser -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/tests/tb_frame_parser.sv {{PROJ_ROOT}}/target/frame_parser.sv sim_main_frame.cpp
-
-# Verilatorビルド（output_interface単体）
-build-output: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_output_interface -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv {{PROJ_ROOT}}/target/output_interface.sv {{PROJ_ROOT}}/tests/tb_output_interface.sv sim_main_output.cpp
-
-# Verilatorビルド（output_interface単体, トレース付き）
-build-output-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_output_interface -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv {{PROJ_ROOT}}/target/output_interface.sv {{PROJ_ROOT}}/tests/tb_output_interface.sv sim_main_output.cpp
-
 # 実行（トレースなし）
 run: build
   ./{{OBJ_DIR}}/Vtb_adat_rx
 
-# 実行（VCDトレース出力付き）
+# 実行（FSTトレース出力付き）
 run-trace: build-trace
   ./{{OBJ_DIR}}/Vtb_adat_rx
-
-# 実行（edge_detector単体）
-run-edge: build-edge
-  ./{{OBJ_DIR}}/Vtb_edge_detector
-
-# 実行（edge_detector単体, トレース付き）
-run-edge-trace: build-edge-trace
-  ./{{OBJ_DIR}}/Vtb_edge_detector
-
-# 実行（timing_tracker単体）
-run-timing: build-timing
-  ./{{OBJ_DIR}}/Vtb_timing_tracker
-
-# 実行（timing_tracker単体, トレース付き）
-run-timing-trace: build-timing-trace
-  ./{{OBJ_DIR}}/Vtb_timing_tracker
-
-# 実行（bit_decoder単体）
-run-bit: build-bit
-  ./{{OBJ_DIR}}/Vtb_bit_decoder
-
-# 実行（bit_decoder単体, トレース付き）
-run-bit-trace: build-bit-trace
-  ./{{OBJ_DIR}}/Vtb_bit_decoder
-
-# 実行（frame_parser単体）
-run-frame: build-frame
-  ./{{OBJ_DIR}}/Vtb_frame_parser
-
-# 実行（frame_parser単体, トレース付き）
-run-frame-trace: build-frame-trace
-  ./{{OBJ_DIR}}/Vtb_frame_parser
-
-# 実行（output_interface単体）
-run-output: build-output
-  ./{{OBJ_DIR}}/Vtb_output_interface
-
-# 実行（output_interface単体, トレース付き）
-run-output-trace: build-output-trace
-  ./{{OBJ_DIR}}/Vtb_output_interface
 
 # 波形表示 (Surfer)
 wave: run-trace
@@ -128,16 +46,92 @@ wave: run-trace
 
 # クリーンアップ
 clean:
+  cd {{PROJ_ROOT}} && veryl clean
   rm -rf {{OBJ_DIR}}
-  rm -f *.vcd
   rm -f {{PROJ_ROOT}}/target/*.sv
 
 # タスク一覧
 help:
   @just --list
-# VCD整合性チェック
-vcd-check:
-  grep '^\$var' adat_rx.vcd | awk '{print $4}' | sort > /tmp/vcd_ids_decl.txt
-  grep -E '^[01xzXZ]|^b[01xzXZ]+' adat_rx.vcd | awk '{print $2}' | sort -u > /tmp/vcd_ids_used.txt
-  comm -13 /tmp/vcd_ids_decl.txt /tmp/vcd_ids_used.txt
-  awk '/^\$var/ {id=$4; w=$3; width[id]=w} /^b[01xzXZ]+/ {val=$1; id=$2; if (length(val)-1 > width[id]) print "WIDTH MISMATCH id="id" decl="width[id]" got="length(val)-1}' adat_rx.vcd
+
+# ユニットテスト一括（トレースなし）
+unit-tests: veryl
+  #!/usr/bin/env bash
+  set -euo pipefail
+  for mod in edge_detector timing_tracker bit_decoder frame_parser output_interface; do
+    case "$mod" in
+      edge_detector)
+        top=tb_edge_detector
+        tb="{{PROJ_ROOT}}/tests/tb_edge_detector.sv"
+        rtl="{{PROJ_ROOT}}/target/edge_detector.sv"
+        main=sim_main_edge.cpp
+        ;;
+      timing_tracker)
+        top=tb_timing_tracker
+        tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
+        rtl="{{PROJ_ROOT}}/target/timing_tracker.sv"
+        main=sim_main_timing.cpp
+        ;;
+      bit_decoder)
+        top=tb_bit_decoder
+        tb="{{PROJ_ROOT}}/tests/tb_bit_decoder.sv"
+        rtl="{{PROJ_ROOT}}/target/bit_decoder.sv"
+        main=sim_main_bit.cpp
+        ;;
+      frame_parser)
+        top=tb_frame_parser
+        tb="{{PROJ_ROOT}}/tests/tb_frame_parser.sv"
+        rtl="{{PROJ_ROOT}}/target/frame_parser.sv"
+        main=sim_main_frame.cpp
+        ;;
+      output_interface)
+        top=tb_output_interface
+        tb="{{PROJ_ROOT}}/tests/tb_output_interface.sv"
+        rtl="{{PROJ_ROOT}}/target/output_interface.sv"
+        main=sim_main_output.cpp
+        ;;
+    esac
+    {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module "$top" -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv "$tb" "$rtl" "$main"
+    ./{{OBJ_DIR}}/V"$top"
+  done
+
+# ユニットテスト一括（トレースあり: FST）
+unit-tests-trace: veryl
+  #!/usr/bin/env bash
+  set -euo pipefail
+  for mod in edge_detector timing_tracker bit_decoder frame_parser output_interface; do
+    case "$mod" in
+      edge_detector)
+        top=tb_edge_detector
+        tb="{{PROJ_ROOT}}/tests/tb_edge_detector.sv"
+        rtl="{{PROJ_ROOT}}/target/edge_detector.sv"
+        main=sim_main_edge.cpp
+        ;;
+      timing_tracker)
+        top=tb_timing_tracker
+        tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
+        rtl="{{PROJ_ROOT}}/target/timing_tracker.sv"
+        main=sim_main_timing.cpp
+        ;;
+      bit_decoder)
+        top=tb_bit_decoder
+        tb="{{PROJ_ROOT}}/tests/tb_bit_decoder.sv"
+        rtl="{{PROJ_ROOT}}/target/bit_decoder.sv"
+        main=sim_main_bit.cpp
+        ;;
+      frame_parser)
+        top=tb_frame_parser
+        tb="{{PROJ_ROOT}}/tests/tb_frame_parser.sv"
+        rtl="{{PROJ_ROOT}}/target/frame_parser.sv"
+        main=sim_main_frame.cpp
+        ;;
+      output_interface)
+        top=tb_output_interface
+        tb="{{PROJ_ROOT}}/tests/tb_output_interface.sv"
+        rtl="{{PROJ_ROOT}}/target/output_interface.sv"
+        main=sim_main_output.cpp
+        ;;
+    esac
+    {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module "$top" -I{{PROJ_ROOT}}/target -Wno-DECLFILENAME {{PROJ_ROOT}}/target/adat_pkg.sv "$tb" "$rtl" "$main"
+    ./{{OBJ_DIR}}/V"$top"
+  done

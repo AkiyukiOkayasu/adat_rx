@@ -17,23 +17,37 @@ ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号
 
 ## シミュレーション
 
-```
+トレース無し:
+
+```sh
 cd sim/verilator
 just run
 ```
 
-## フォーマット
+トレース付き:
 
-```
+```sh
 cd sim/verilator
-just fmt
+just run-trace
 ```
 
-`just build`/`just run` は自動で `veryl fmt` を実行します。
+## ユニットテスト
+
+```sh
+cd sim/verilator
+just unit-tests
+```
+
+トレース付き:
+
+```sh
+cd sim/verilator
+just unit-tests-trace
+```
 
 ## SV Lint
 
-```
+```sh
 svls
 ```
 
@@ -41,7 +55,7 @@ svls
 
 GTKWaveはmacOSで問題があるため、**Surfer**を使用します。
 
-```bash
+```sh
 # インストール
 brew install surfer
 
@@ -54,7 +68,8 @@ surfer /Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fs
 ```
 
 またはシミュレーション後に自動でSurferを起動:
-```bash
+
+```sh
 cd sim/verilator
 just wave
 ```
@@ -64,7 +79,7 @@ just wave
 Verylのドキュメンテーションコメントでは Wavedrom を使用できます。
 `src/adat_rx.veryl` の例に倣い、以下のように `wavedrom` フェンスを使います。
 
-```
+```veryl
 /// ```wavedrom
 /// { "signal": [ {"name": "clk", "wave": "P....."} ] }
 /// ```
