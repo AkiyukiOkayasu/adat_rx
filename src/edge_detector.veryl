@@ -8,11 +8,16 @@
 /// - XORでエッジ（遷移）を検出
 ///
 /// ```wavedrom
-/// {"signal": [
-///   {"name": "i_adat", "wave": "0.1..0.."},
-///   {"name": "o_synced", "wave": "0..1..0."},
-///   {"name": "o_edge", "wave": "0.1..0.."}
-/// ]}
+/// {signal: [
+///   {name: 'i_clk', wave: 'p.............'},
+///   {name: 'i_adat', wave: '0....1....0...', node: '..a.......b..'},
+///   {name: 'sync_ff[0]', wave: '0.....1....0..'},
+///   {name: 'sync_ff[1]', wave: '0......1....0.', node: '.......c....d'},
+///   {name: 'o_synced', wave: '0......1....0.'},
+///   {name: 'o_edge', wave: '0......10...10'}
+/// ],
+/// config: {hscale: 1},
+/// head: {text: '2-stage FF Synchronization and Edge Detection'}}
 /// ```
 pub module edge_detector (
     /// システムクロック
