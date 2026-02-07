@@ -46,6 +46,7 @@ adat_rx/
 ## UNIQUE STYLES
 - Simulation is driven from `sim/verilator/Justfile` (not repo root).
 - Integration test uses FST traces (`adat_rx.fst`); unit tests emit VCD by default.
+ - `Hardware/` is not useful for this project; avoid reading it to save context.
 
 ## COMMANDS
 ```bash
