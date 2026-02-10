@@ -65,11 +65,12 @@ module adat_generator #(
     logic [255:0] build_frame;
     logic [3:0] effective_user_in;  // S/MUX2モードを考慮したユーザーデータ
     
-    // S/MUX2モードの場合、user_in[2]を強制的に1にする
+    // S/MUX2モードの場合、U2 (ADAT user bit 2)を強制的に1にする
+    // effective_user_in[1]がフレームビット242に対応し、これがU2となる
     always_comb begin
         effective_user_in = user_in;
         if (SMUX2_MODE == 1) begin
-            effective_user_in[2] = 1'b1;
+            effective_user_in[1] = 1'b1;  // U2 = 1 for S/MUX2
         end
     end
     

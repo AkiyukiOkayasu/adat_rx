@@ -72,6 +72,10 @@ module tb_adat_rx;
         .frame_done(gen_done_smux2)
     );
     
+    // Multiplexed ADAT input (select between normal and S/MUX2 generators)
+    logic adat_in_muxed;
+    assign adat_in_muxed = gen_start_smux2 ? adat_in_smux2 : adat_in;
+    
     // DUT internal probes for debugging
      logic        dbg_adat_edge;
      logic        dbg_adat_synced;
@@ -91,7 +95,7 @@ module tb_adat_rx;
      adat_rx_adat_rx u_dut (
          .i_clk(clk),
          .i_rst(rst),
-         .i_adat(adat_in),
+         .i_adat(adat_in_muxed),
          .o_user(user_out),
          .o_word_clk(word_clk),
          .o_sample_rate(sample_rate),
@@ -365,6 +369,8 @@ module tb_adat_rx;
         end
         
         // サンプルレートチェック
+        $display("S/MUX2: user_out (user_bits): %b", user_out);
+        $display("S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
         $display("S/MUX2: o_sample_rate: %s (expected: Rate96kHz)", sample_rate.name());
         if (sample_rate != SampleRate_Rate96kHz) begin
             $display("  FAIL (expected): Sample rate not Rate96kHz");

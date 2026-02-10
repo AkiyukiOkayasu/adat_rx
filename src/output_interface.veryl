@@ -71,32 +71,39 @@ pub module output_interface (
     var locked: logic;
     // フレームカウンタ（ロック検出用）
     var frame_cnt: logic<4>;
+    // S/MUX2モード検出
+    var smux2_mode: logic;
+    // 出力フェーズ（S/MUX2用）
+    var output_phase: logic;
 
-    assign o_sample_rate    = sample_rate;
-    assign o_word_clk       = word_clk;
-    assign o_valid          = valid_out;
-    assign o_locked         = locked;
-    assign o_valid_channels = 4'd8;
+    // S/MUX2モード検出 (ADAT User Bit 2 → i_user_bits[1])
+    assign smux2_mode = i_user_bits[1];
+
+    // サンプルレート出力（S/MUX2検出結果を反映）
+    always_comb {
+        if smux2_mode {
+            sample_rate = SampleRate::Rate96kHz;
+        } else {
+            sample_rate = SampleRate::Rate48kHz;
+        }
+    }
+
+    assign o_sample_rate = sample_rate;
+    assign o_word_clk    = word_clk;
+    assign o_valid       = valid_out;
+    assign o_locked      = locked;
+
+    always_comb {
+        if smux2_mode {
+            o_valid_channels = 4'd4;
+        } else {
+            o_valid_channels = 4'd8;
+        }
+    }
 
     // チャンネル出力割り当て
     for i in 0..8 :g_ch_out {
         assign o_channels[i] = channels[i];
-    }
-
-    // サンプルレート検出
-    // フレーム時間から判定（ヒステリシス付き）
-    always_ff (i_clk, i_rst) {
-        if_reset {
-            sample_rate = SampleRate::Rate48kHz;
-        } else {
-            if i_frame_time >: 12'd1500 {
-                sample_rate = SampleRate::Rate48kHz;
-            } else if i_frame_time >: 12'd750 {
-                sample_rate = SampleRate::Rate96kHz;
-            } else {
-                sample_rate = SampleRate::Rate192kHz;
-            }
-        }
     }
 
     // ロック検出
@@ -138,21 +145,42 @@ pub module output_interface (
     // チャンネルデータ格納
     always_ff (i_clk, i_rst) {
         if_reset {
-            channels[0] = 24'd0;
-            channels[1] = 24'd0;
-            channels[2] = 24'd0;
-            channels[3] = 24'd0;
-            channels[4] = 24'd0;
-            channels[5] = 24'd0;
-            channels[6] = 24'd0;
-            channels[7] = 24'd0;
-            valid_out   = 1'b0;
-        } else if i_data_valid {
-            channels[i_channel] = i_data;
-            // 最後のチャンネル(7)受信で出力有効
-            valid_out = i_channel == 3'd7;
+            channels[0]  = 24'd0;
+            channels[1]  = 24'd0;
+            channels[2]  = 24'd0;
+            channels[3]  = 24'd0;
+            channels[4]  = 24'd0;
+            channels[5]  = 24'd0;
+            channels[6]  = 24'd0;
+            channels[7]  = 24'd0;
+            valid_out    = 1'b0;
+            output_phase = 1'b0;
         } else {
-            valid_out = 1'b0;
+            // S/MUX2モードで2回目のo_validを出力する必要がある場合
+            if smux2_mode && output_phase == 1'b1 {
+                // 2回目のo_valid出力
+                valid_out    = 1'b1;
+                output_phase = 1'b0;
+            } else if i_data_valid {
+                // チャンネルデータを格納
+                channels[i_channel] = i_data;
+                // 最後のチャンネル(7)受信で出力有効
+                if i_channel == 3'd7 {
+                    if smux2_mode {
+                        // S/MUX2モード: 1回目のo_valid出力
+                        valid_out    = 1'b1;
+                        output_phase = 1'b1;
+                    } else {
+                        // 通常モード: o_valid出力
+                        valid_out    = 1'b1;
+                        output_phase = 1'b0;
+                    }
+                } else {
+                    valid_out = 1'b0;
+                }
+            } else {
+                valid_out = 1'b0;
+            }
         }
     }
 }
