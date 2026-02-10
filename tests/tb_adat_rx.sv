@@ -51,6 +51,27 @@ module tb_adat_rx;
         .frame_done(gen_done)
     );
     
+    // ADATジェネレータ (44.1kHzモード用)
+    logic        adat_in_44k;
+    logic        gen_done_44k;
+    logic        gen_start_44k;
+    logic [23:0] test_audio_44k [0:7];
+    logic [3:0]  test_user_44k;
+    
+    adat_generator #(
+        .CLK_FREQ(100_000_000),
+        .SAMPLE_RATE(44100),
+        .SMUX2_MODE(0)
+    ) u_gen_44k (
+        .clk(clk),
+        .rst_n(rst),
+        .audio_in(test_audio_44k),
+        .user_in(test_user_44k),
+        .start(gen_start_44k),
+        .adat_out(adat_in_44k),
+        .frame_done(gen_done_44k)
+    );
+    
     // ADATジェネレータ (S/MUX2モード用)
     logic        adat_in_smux2;
     logic        gen_done_smux2;
@@ -72,9 +93,9 @@ module tb_adat_rx;
         .frame_done(gen_done_smux2)
     );
     
-    // Multiplexed ADAT input (select between normal and S/MUX2 generators)
+    // Multiplexed ADAT input (select between normal, 44.1kHz, and S/MUX2 generators)
     logic adat_in_muxed;
-    assign adat_in_muxed = gen_start_smux2 ? adat_in_smux2 : adat_in;
+    assign adat_in_muxed = gen_start_smux2 ? adat_in_smux2 : (gen_start_44k ? adat_in_44k : adat_in);
     
     // DUT internal probes for debugging
      logic        dbg_adat_edge;
@@ -300,6 +321,112 @@ module tb_adat_rx;
             $display("*** TEST PASSED ***");
         end else begin
             $display("*** TEST FAILED ***");
+        end
+        
+        // ==================== 44.1kHz TEST ====================
+        $display("\n=== 44.1kHz Test ===");
+        $display("Clock: 100MHz, Sample Rate: 44.1kHz");
+        
+        // テストデータ設定
+        test_user_44k = 4'hB;
+        test_audio_44k[0] = 24'h441100;
+        test_audio_44k[1] = 24'h441111;
+        test_audio_44k[2] = 24'h441122;
+        test_audio_44k[3] = 24'h441133;
+        test_audio_44k[4] = 24'h441144;
+        test_audio_44k[5] = 24'h441155;
+        test_audio_44k[6] = 24'h441166;
+        test_audio_44k[7] = 24'h441177;
+        
+        // リセット
+        rst = 0;
+        gen_start = 0;
+        gen_start_44k = 0;
+        gen_start_smux2 = 0;
+        frame_count = 0;
+        error_count = 0;
+        test_pass = 1;
+        #100;
+        rst = 1;
+        #100;
+        
+        // 44.1kHzフレーム送信開始
+        gen_start_44k = 1;
+        
+        // フレーム送信
+        repeat (10) begin
+            @(posedge gen_done_44k);
+            #10;
+            frame_count++;
+            $display("44.1kHz Frame %0d completed", frame_count);
+        end
+        
+        // ロック確認
+        #100;
+        
+        $display("\n=== 44.1kHz Debug Info ===");
+        $display("Frame time: %0d (expected ~2268 for 44.1kHz)", dbg_frame_time);
+        $display("Max time: %0d", dbg_max_time);
+        $display("Locked: %b", locked);
+        
+        if (!locked) begin
+            $display("44.1kHz FAIL: Receiver not locked");
+            test_pass = 0;
+            $finish;
+        end else begin
+            $display("44.1kHz PASS: Receiver locked");
+        end
+        
+        $display("\n44.1kHz: Starting strict data comparison...");
+        
+        repeat (5) begin
+            got_valid = 1'b0;
+            fork
+                begin @(posedge valid); got_valid = 1'b1; end
+                begin #200_000; end
+            join_any
+            disable fork;
+            
+            if (!got_valid) begin
+                $display("44.1kHz FAIL: Timeout waiting for valid");
+                error_count++;
+                test_pass = 0;
+                $finish;
+            end
+            
+            #10;
+            
+            $display("\n44.1kHz Frame received, comparing all channels:");
+            for (int i = 0; i < 8; i++) begin
+                if (channels[i] !== test_audio_44k[i]) begin
+                    $display("  44.1kHz Channel %0d: FAIL - Expected: %h, Got: %h", 
+                             i, test_audio_44k[i], channels[i]);
+                    error_count++;
+                    test_pass = 0;
+                end else begin
+                    $display("  44.1kHz Channel %0d: PASS - %h", i, channels[i]);
+                end
+            end
+            
+            if (user_out !== test_user_44k) begin
+                $display("  44.1kHz User data: FAIL - Expected: %h, Got: %h", test_user_44k, user_out);
+                error_count++;
+                test_pass = 0;
+            end else begin
+                $display("  44.1kHz User data: PASS - %h", user_out);
+            end
+            
+            #100;
+        end
+        
+        $display("\n=== 44.1kHz Test Results ===");
+        $display("Frames sent: %0d", frame_count);
+        $display("Errors: %0d", error_count);
+        
+        if (test_pass && error_count == 0) begin
+            $display("*** 44.1kHz TEST PASSED ***");
+        end else begin
+            $display("*** 44.1kHz TEST FAILED ***");
         end
         
         // ==================== S/MUX2 TEST ====================
