@@ -1,5 +1,0 @@
--Info: ../../tests/tb_frame_parser.sv:125: $dumpvar ignored, as Verilated without --trace
-=== Bit Order Verification ===
-FAIL: bit-order - Expected 123456 got cae9db
-*** TEST FAILED ***
-- ../../tests/tb_frame_parser.sv:120: Verilog $finish
