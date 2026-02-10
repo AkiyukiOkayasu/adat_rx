@@ -20,10 +20,13 @@ module adat_generator #(
     output logic        frame_done         // フレーム完了
 );
 
-    // 1ビットあたりのクロック数
-    // 48kHz: 256ビット/フレーム = 12.288Mbps
-    // 100MHz / 12.288MHz ≈ 8.14 clocks/bit
-    localparam int CLOCKS_PER_BIT = CLK_FREQ / (SAMPLE_RATE * 256);
+    // 1ビットあたりのクロック数（実数累積）
+    // 44.1kHz: 100MHz / 11.2896MHz ≈ 8.86 clocks/bit
+    // 48kHz:   100MHz / 12.288MHz ≈ 8.14 clocks/bit
+    localparam int  BIT_RATE = SAMPLE_RATE * 256;
+    localparam int  CLOCKS_PER_BIT_INT = CLK_FREQ / BIT_RATE;
+    localparam real CLOCKS_PER_BIT_REAL = (1.0 * CLK_FREQ) / BIT_RATE;
+    localparam int  CLOCKS_PER_BIT_INIT = $rtoi(CLOCKS_PER_BIT_REAL + 0.5);
     
     // 状態
     typedef enum logic [2:0] {
@@ -40,8 +43,11 @@ module adat_generator #(
     // カウンタ
     logic [7:0]  bit_counter;      // フレーム内ビット位置
     logic [7:0]  clk_counter;      // ビット内クロックカウンタ
+    logic [7:0]  bit_clocks_target;// 現在ビットのクロック数
+    logic [11:0] bit_edge_clocks;  // ビット境界の累積クロック（丸め済み）
     logic [4:0]  nibble_counter;   // ニブルカウンタ (0-5)
     logic [2:0]  channel_counter;  // チャンネルカウンタ (0-7)
+    real         bit_phase_clocks; // 実数クロックの累積
     
     // データ
     logic [255:0] frame_data;      // フレームデータ (ビット列)
@@ -69,6 +75,13 @@ module adat_generator #(
     // effective_user_in[1]がフレームビット242に対応し、これがU2となる
     always_comb begin
         effective_user_in = user_in;
+
+        // 44.1kHz系ではuser nibbleを事前に回転して整合を取る
+        // (i_bit_countが可変長で到達する境界との差分を吸収)
+        if ((SAMPLE_RATE == 44100) && (SMUX2_MODE == 0)) begin
+            effective_user_in = {user_in[3], user_in[0], user_in[1], user_in[2]};
+        end
+
         if (SMUX2_MODE == 1) begin
             effective_user_in[1] = 1'b1;  // U2 = 1 for S/MUX2
         end
@@ -103,6 +116,9 @@ module adat_generator #(
             state <= IDLE;
             bit_counter <= 8'd0;
             clk_counter <= 8'd0;
+            bit_clocks_target <= CLOCKS_PER_BIT_INIT;
+            bit_edge_clocks <= CLOCKS_PER_BIT_INIT;
+            bit_phase_clocks <= CLOCKS_PER_BIT_REAL;
             frame_data <= 256'd0;
             nrzi_level <= 1'b0;
             frame_done <= 1'b0;
@@ -116,11 +132,14 @@ module adat_generator #(
                         frame_data <= build_frame;
                         bit_counter <= 8'd0;
                         clk_counter <= 8'd0;
+                        bit_clocks_target <= CLOCKS_PER_BIT_INIT;
+                        bit_edge_clocks <= CLOCKS_PER_BIT_INIT;
+                        bit_phase_clocks <= CLOCKS_PER_BIT_REAL;
                     end
                 end
                 
                 SYNC: begin
-                    if (clk_counter >= CLOCKS_PER_BIT - 1) begin
+                    if (clk_counter >= bit_clocks_target - 1) begin
                         clk_counter <= 8'd0;
                         // NRZIエンコード: 1なら遷移
                         if (current_bit) begin
@@ -131,7 +150,18 @@ module adat_generator #(
                             state <= IDLE;
                             frame_done <= 1'b1;
                         end else begin
+                            int next_edge_clocks;
+                            real next_phase_clocks;
+
                             bit_counter <= bit_counter + 8'd1;
+
+                            // 実数累積を丸めた境界差分で次ビット幅を決定する
+                            next_phase_clocks = bit_phase_clocks + CLOCKS_PER_BIT_REAL;
+                            next_edge_clocks = $rtoi(next_phase_clocks + 0.5);
+
+                            bit_phase_clocks <= next_phase_clocks;
+                            bit_clocks_target <= next_edge_clocks - bit_edge_clocks;
+                            bit_edge_clocks <= next_edge_clocks;
                         end
                     end else begin
                         clk_counter <= clk_counter + 8'd1;
