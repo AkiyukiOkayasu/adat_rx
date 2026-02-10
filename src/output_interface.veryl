@@ -42,6 +42,8 @@ pub module output_interface (
     i_data_valid: input logic,
     /// 同期マスク
     i_sync: input logic,
+    /// ユーザービット入力
+    i_user_bits: input logic<4>,
     /// 検出されたサンプルレート
     o_sample_rate: output SampleRate,
     /// ワードクロック出力
@@ -52,6 +54,8 @@ pub module output_interface (
     o_valid: output logic,
     /// 同期ロック状態
     o_locked: output logic,
+    /// 有効なチャンネル数
+    o_valid_channels: output logic<4>,
 ) {
     // サンプルレートレジスタ
     var sample_rate: SampleRate;
@@ -68,10 +72,11 @@ pub module output_interface (
     // フレームカウンタ（ロック検出用）
     var frame_cnt: logic<4>;
 
-    assign o_sample_rate = sample_rate;
-    assign o_word_clk    = word_clk;
-    assign o_valid       = valid_out;
-    assign o_locked      = locked;
+    assign o_sample_rate    = sample_rate;
+    assign o_word_clk       = word_clk;
+    assign o_valid          = valid_out;
+    assign o_locked         = locked;
+    assign o_valid_channels = 4'd8;
 
     // チャンネル出力割り当て
     for i in 0..8 :g_ch_out {

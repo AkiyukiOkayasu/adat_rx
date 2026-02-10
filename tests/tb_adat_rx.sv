@@ -73,31 +73,33 @@ module tb_adat_rx;
     );
     
     // DUT internal probes for debugging
-    logic        dbg_adat_edge;
-    logic        dbg_adat_synced;
-    logic [11:0] dbg_frame_time;
-    logic [9:0]  dbg_max_time;
-    logic        dbg_sync_detect;
-    logic [4:0]  dbg_bits;
-    logic [2:0]  dbg_bit_count;
-    logic        dbg_bits_valid;
-    logic [29:0] dbg_shift_reg;
-    logic [7:0]  dbg_bit_counter;
-    logic [2:0]  dbg_channel;
-    logic        dbg_data_valid;
-    logic [3:0]  dbg_frame_cnt;
+     logic        dbg_adat_edge;
+     logic        dbg_adat_synced;
+     logic [11:0] dbg_frame_time;
+     logic [9:0]  dbg_max_time;
+     logic        dbg_sync_detect;
+     logic [4:0]  dbg_bits;
+     logic [2:0]  dbg_bit_count;
+     logic        dbg_bits_valid;
+     logic [29:0] dbg_shift_reg;
+     logic [7:0]  dbg_bit_counter;
+     logic [2:0]  dbg_channel;
+     logic        dbg_data_valid;
+     logic [3:0]  dbg_frame_cnt;
+     logic [3:0]  valid_channels;
     
-    adat_rx_adat_rx u_dut (
-        .i_clk(clk),
-        .i_rst(rst),
-        .i_adat(adat_in),
-        .o_user(user_out),
-        .o_word_clk(word_clk),
-        .o_sample_rate(sample_rate),
-        .o_channels(channels),
-        .o_valid(valid),
-        .o_locked(locked)
-    );
+     adat_rx_adat_rx u_dut (
+         .i_clk(clk),
+         .i_rst(rst),
+         .i_adat(adat_in),
+         .o_user(user_out),
+         .o_word_clk(word_clk),
+         .o_sample_rate(sample_rate),
+         .o_channels(channels),
+         .o_valid(valid),
+         .o_locked(locked),
+         .o_valid_channels(valid_channels)
+     );
     
     // Probe internal signals
     assign dbg_adat_edge = u_dut.adat_edge;
