@@ -12,11 +12,13 @@ module tb_output_interface;
     logic [2:0] channel;
     logic data_valid;
     logic sync;
+    logic [3:0] user_bits;
     SampleRate sample_rate;
     logic word_clk;
     logic [23:0] channels [0:7];
     logic valid;
     logic locked;
+    logic [3:0] valid_channels;
 
     initial begin
         clk = 0;
@@ -31,11 +33,13 @@ module tb_output_interface;
         .i_channel(channel),
         .i_data_valid(data_valid),
         .i_sync(sync),
+        .i_user_bits(user_bits),
         .o_sample_rate(sample_rate),
         .o_word_clk(word_clk),
         .o_channels(channels),
         .o_valid(valid),
-        .o_locked(locked)
+        .o_locked(locked),
+        .o_valid_channels(valid_channels)
     );
 
     task send_frame(input int frames);
@@ -69,10 +73,13 @@ module tb_output_interface;
         channel = 3'd0;
         data_valid = 1'b0;
         sync = 1'b1;
+        user_bits = 4'b0000;  // Normal mode (S/MUX2 bit=0)
         repeat (2) @(posedge clk);
         rst = 1'b1;
         repeat (2) @(posedge clk);
 
+        // Test 1: Normal 48kHz mode
+        $display("=== Test 1: Normal 48kHz Mode ===");
         send_frame(5);
 
         if (!locked) begin
@@ -81,6 +88,33 @@ module tb_output_interface;
         end
         if (sample_rate !== SampleRate_Rate48kHz) begin
             $display("FAIL: sample_rate not 48kHz");
+            pass = 0;
+        end
+        if (valid_channels !== 4'd8) begin
+            $display("FAIL: valid_channels should be 8 in normal mode, got %d", valid_channels);
+            pass = 0;
+        end
+
+        // Test 2: S/MUX2 mode
+        $display("=== Test 2: S/MUX2 Mode ===");
+        rst = 1'b0;
+        user_bits = 4'b0010;  // S/MUX2 mode (bit[1]=1)
+        repeat (2) @(posedge clk);
+        rst = 1'b1;
+        repeat (2) @(posedge clk);
+
+        send_frame(5);
+
+        if (!locked) begin
+            $display("FAIL: locked not asserted in S/MUX2");
+            pass = 0;
+        end
+        if (sample_rate !== SampleRate_Rate96kHz) begin
+            $display("FAIL: sample_rate should be 96kHz in S/MUX2, got %d", sample_rate);
+            pass = 0;
+        end
+        if (valid_channels !== 4'd4) begin
+            $display("FAIL: valid_channels should be 4 in S/MUX2 mode, got %d", valid_channels);
             pass = 0;
         end
 
