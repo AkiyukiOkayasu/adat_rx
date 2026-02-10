@@ -20,7 +20,10 @@ S/MUX（Sample Multiplexing）はADATプロトコルで高サンプルレート�
 
 ### 🔍 サンプルレート判定ロジック
 
+⚠️ **誤り**: 以下のframe_timeベース判定は**不正確**です。S/MUX2では物理ビットレートが変化しないため、frame_timeでの判定は不可能です。
+
 ```veryl
+// 【削除予定】古い実装（誤り）
 // output_interface.veryl
 always_ff (i_clk, i_rst) {
     if_reset {
@@ -35,6 +38,14 @@ always_ff (i_clk, i_rst) {
         }
     }
 }
+```
+
+✅ **正しい方法**: UserBit[2]によるS/MUX検出
+
+```veryl
+// 【新規実装】正しい実装（UserBit[2]で判定）
+var smux2_mode: logic = i_user_bits[2];
+o_sample_rate = smux2_mode ? SampleRate::Rate96kHz : SampleRate::Rate48kHz;
 ```
 
 ### ✅ テストベンチでのS/MUX検証
@@ -60,9 +71,9 @@ always_ff (i_clk, i_rst) {
 
 | モード | フレームレート | 物理ビットレート | 論理チャンネル数 | 1論理chあたりフレーム数 |
 |-------|--------------|----------------|----------------|---------------------|
-| 48kHz | 48,000Hz | 12.288Mbps | 8ch | 1フレーム |
-| 96kHz S/MUX2 | 96,000Hz | 24.576Mbps | 4ch | 2フレーム |
-| 192kHz S/MUX4 | 192,000Hz | 49.152Mbps | 2ch | 4フレーム |
+| 48kHz | 48,000Hz | 12.288Mbps（不変） | 8ch | 1フレーム |
+| 96kHz S/MUX2 | 96,000Hz | 12.288Mbps（不変） | 4ch | 2フレーム |
+| 192kHz S/MUX4 | 192,000Hz | 12.288Mbps（不変） | 2ch | 4フレーム |
 
 ### S/MUX2 (96kHz) データ配置
 
@@ -88,6 +99,35 @@ always_ff (i_clk, i_rst) {
 
 - 192kHzサンプルを4つの48kHzサンプルに分割
 - 4フレームにわたってインターリーブ配置
+
+### ✅ S/MUX2（96kHz）DUT出力方式
+
+物理ビットレートはS/MUX2でも**12.288Mbps固定**のため、DUT内でのデータ復元は不要です。
+
+**DUTの役割:**
+- 1フレーム受信ごとに**2回のo_valid**を出力
+- o_channels[0-7]は**物理8chをそのまま出力**（チャンネルマッピングなし）
+- o_sample_rateで**Rate96kHz**を出力
+
+```
+フレーム0内のデータ配置（物理チャンネル）:
+┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│  Ch0    │  Ch1    │  Ch2    │  Ch3    │  Ch4    │  Ch5    │  Ch6    │  Ch7    │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│Out0 1st │Out0 2nd │Out1 1st │Out1 2nd │Out2 1st │Out2 2nd │Out3 1st │Out3 2nd │
+└─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
+
+DUT出力タイミング:
+- o_valid 1回目 (t=T)   : o_channels[0-7] = Ch0～Ch7の値、o_valid_channels=4
+- o_valid 2回目 (t=T+1) : o_channels[0-7] = Ch0～Ch7の値（同じデータ）、o_valid_channels=4
+```
+
+**エンドユーザーの処理（FIFO等で実装）:**
+- o_sample_rate == Rate96kHzを見てS/MUX2と判定
+- o_valid_channels == 4を確認
+- 1回目のo_valid: Ch0, Ch2, Ch4, Ch6（1st samples）をFIFOへ
+- 2回目のo_valid: Ch1, Ch3, Ch5, Ch7（2nd samples）をFIFOへ
+- FIFOから論理4ch@96kHzとして読み出し
 
 ---
 
