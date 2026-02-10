@@ -72,7 +72,7 @@ module tb_adat_rx;
         .frame_done(gen_done_44k)
     );
     
-    // ADATジェネレータ (S/MUX2モード用)
+    // ADATジェネレータ (S/MUX2モード用 - 96kHz)
     logic        adat_in_smux2;
     logic        gen_done_smux2;
     logic        gen_start_smux2;
@@ -93,9 +93,30 @@ module tb_adat_rx;
         .frame_done(gen_done_smux2)
     );
     
-    // Multiplexed ADAT input (select between normal, 44.1kHz, and S/MUX2 generators)
+    // ADATジェネレータ (S/MUX2モード用 - 88.2kHz)
+    logic        adat_in_smux2_88k;
+    logic        gen_done_smux2_88k;
+    logic        gen_start_smux2_88k;
+    logic [23:0] test_audio_smux2_88k [0:7];
+    logic [3:0]  test_user_smux2_88k;
+    
+    adat_generator #(
+        .CLK_FREQ(100_000_000),
+        .SAMPLE_RATE(44100),
+        .SMUX2_MODE(1)
+    ) u_gen_smux2_88k (
+        .clk(clk),
+        .rst_n(rst),
+        .audio_in(test_audio_smux2_88k),
+        .user_in(test_user_smux2_88k),
+        .start(gen_start_smux2_88k),
+        .adat_out(adat_in_smux2_88k),
+        .frame_done(gen_done_smux2_88k)
+    );
+    
+    // Multiplexed ADAT input (select between normal, 44.1kHz, S/MUX2 96kHz, and S/MUX2 88.2kHz generators)
     logic adat_in_muxed;
-    assign adat_in_muxed = gen_start_smux2 ? adat_in_smux2 : (gen_start_44k ? adat_in_44k : adat_in);
+    assign adat_in_muxed = gen_start_smux2_88k ? adat_in_smux2_88k : (gen_start_smux2 ? adat_in_smux2 : (gen_start_44k ? adat_in_44k : adat_in));
     
     // DUT internal probes for debugging
      logic        dbg_adat_edge;
@@ -524,6 +545,105 @@ module tb_adat_rx;
             $display("*** S/MUX2 TEST FAILED ***");
         end else begin
             $display("*** S/MUX2 TEST PASSED ***");
+        end
+        
+        // ==================== 88.2kHz S/MUX2 TEST ====================
+        $display("\n=== 88.2kHz S/MUX2 Test (88.2kHz 4ch mode) ===");
+        
+        // テストデータ設定 (8チャンネル分のデータを用意)
+        test_user_smux2_88k = 4'b0000;  // user_in[2]は自動的に1になる
+        test_audio_smux2_88k[0] = 24'h882000;
+        test_audio_smux2_88k[1] = 24'h882111;
+        test_audio_smux2_88k[2] = 24'h882200;
+        test_audio_smux2_88k[3] = 24'h882311;
+        test_audio_smux2_88k[4] = 24'h882400;
+        test_audio_smux2_88k[5] = 24'h882511;
+        test_audio_smux2_88k[6] = 24'h882600;
+        test_audio_smux2_88k[7] = 24'h882711;
+        
+        // リセット
+        rst = 0;
+        gen_start = 0;
+        gen_start_44k = 0;
+        gen_start_smux2 = 0;
+        gen_start_smux2_88k = 0;
+        #100;
+        rst = 1;
+        #100;
+        
+        // 88.2kHz S/MUX2フレーム送信開始
+        gen_start_smux2_88k = 1;
+        
+        // 10フレーム送信
+        repeat (10) begin
+            @(posedge gen_done_smux2_88k);
+            #10;
+        end
+        
+        // ロック確認
+        #100;
+        if (!locked) begin
+            $display("88.2kHz S/MUX2 FAIL (expected): Receiver not locked");
+        end else begin
+            $display("88.2kHz S/MUX2: Receiver locked");
+        end
+        
+        // S/MUX2期待値チェック (これらは現在のDUTでは失敗するはず)
+        smux2_errors = 0;
+        valid_count_per_frame = 0;
+        
+        // 1フレーム分のo_validパルスをカウント
+        @(posedge gen_done_smux2_88k);
+        #10;
+        fork
+            begin
+                repeat (5000) begin
+                    @(posedge clk);
+                    if (valid) valid_count_per_frame = valid_count_per_frame + 1;
+                    if (gen_done_smux2_88k) break;
+                end
+            end
+            begin
+                @(posedge gen_done_smux2_88k);
+            end
+        join_any
+        disable fork;
+        
+        $display("88.2kHz S/MUX2: o_valid pulses per frame: %0d (expected: 2)", valid_count_per_frame);
+        if (valid_count_per_frame != 2) begin
+            $display("  88.2kHz FAIL (expected): o_valid count mismatch");
+            smux2_errors = smux2_errors + 1;
+        end
+        
+        // サンプルレートチェック
+        $display("88.2kHz S/MUX2: user_out (user_bits): %b", user_out);
+        $display("88.2kHz S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
+        $display("88.2kHz S/MUX2: o_sample_rate: %s (expected: Rate96kHz)", sample_rate.name());
+        if (sample_rate != SampleRate_Rate96kHz) begin
+            $display("  88.2kHz FAIL (expected): Sample rate not Rate96kHz");
+            smux2_errors = smux2_errors + 1;
+        end
+        
+        // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
+        @(posedge valid);
+        #10;
+        $display("88.2kHz S/MUX2: Checking data integrity...");
+        for (int i = 0; i < 8; i = i + 1) begin
+            if (channels[i] !== test_audio_smux2_88k[i]) begin
+                $display("  88.2kHz Channel %0d: FAIL - Expected: %h, Got: %h", 
+                         i, test_audio_smux2_88k[i], channels[i]);
+                smux2_errors = smux2_errors + 1;
+            end else begin
+                $display("  88.2kHz Channel %0d: PASS - %h", i, channels[i]);
+            end
+        end
+        
+        $display("\n=== 88.2kHz S/MUX2 Test Results ===");
+        $display("Errors: %0d", smux2_errors);
+        if (smux2_errors > 0) begin
+            $display("*** 88.2kHz S/MUX2 TEST FAILED ***");
+        end else begin
+            $display("*** 88.2kHz S/MUX2 TEST PASSED ***");
         end
         
         #1000;
