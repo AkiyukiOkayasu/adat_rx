@@ -71,9 +71,12 @@ o_sample_rate = smux2_mode ? SampleRate::Rate96kHz : SampleRate::Rate48kHz;
 
 | モード | フレームレート | 物理ビットレート | 論理チャンネル数 | 1論理chあたりフレーム数 |
 |-------|--------------|----------------|----------------|---------------------|
-| 48kHz | 48,000Hz | 12.288Mbps（不変） | 8ch | 1フレーム |
-| 96kHz S/MUX2 | 96,000Hz | 12.288Mbps（不変） | 4ch | 2フレーム |
-| 192kHz S/MUX4 | 192,000Hz | 12.288Mbps（不変） | 2ch | 4フレーム |
+| 44.1kHz | 44,100Hz | 11.2896Mbps | 8ch | 1フレーム |
+| 48kHz | 48,000Hz | 12.288Mbps | 8ch | 1フレーム |
+| 88.2kHz S/MUX2 | 88,200Hz | 11.2896Mbps | 4ch | 2フレーム |
+| 96kHz S/MUX2 | 96,000Hz | 12.288Mbps | 4ch | 2フレーム |
+| 176.4kHz S/MUX4 | 176,400Hz | 11.2896Mbps | 2ch | 4フレーム |
+| 192kHz S/MUX4 | 192,000Hz | 12.288Mbps | 2ch | 4フレーム |
 
 ### S/MUX2 (96kHz) データ配置
 
@@ -102,7 +105,7 @@ o_sample_rate = smux2_mode ? SampleRate::Rate96kHz : SampleRate::Rate48kHz;
 
 ### ✅ S/MUX2（96kHz）DUT出力方式
 
-物理ビットレートはS/MUX2でも**12.288Mbps固定**のため、DUT内でのデータ復元は不要です。
+物理ビットレートはS/MUX2でも**11.2896Mbpsまたは12.288Mbps固定**のため、DUT内でのデータ復元は不要です。
 
 **DUTの役割:**
 - 1フレーム受信ごとに**2回のo_valid**を出力
