@@ -33,18 +33,4 @@ pub package adat_pkg {
         /// 176.4kHz / 192kHz - 2チャンネル (S/MUX4)
         Rate192kHz = 2'b10,
     }
-
-    /// フレーム時間しきい値 (100MHz基準)
-    /// S/MUXでは物理ビットレートが変化しないため、これらの定数は不使用
-    /// S/MUX2検出はUserBit[2]を使用する
-    /// 48kHz: 100M / 48k ≈ 2083 cycles
-    const FRAME_TIME_48K: u32 = 2083;
-    /// 96kHz: 100M / 96k ≈ 1042 cycles (S/MUXでは不使用 - UserBitで検出)
-    const FRAME_TIME_96K: u32 = 1042;
-    /// 192kHz: 100M / 192k ≈ 521 cycles (S/MUXでは不使用 - UserBitで検出)
-    const FRAME_TIME_192K: u32 = 521;
-
-    /// サンプルレート判定しきい値 (ヒステリシス付き)
-    const RATE_THRESHOLD_48K: u32 = 1500;
-    const RATE_THRESHOLD_96K: u32 = 750;
 }
