@@ -302,8 +302,8 @@ module tb_adat_rx;
             $display("*** TEST FAILED ***");
         end
         
-        // ==================== S/MUX2 TEST (RED PHASE) ====================
-        $display("\n=== S/MUX2 Test (RED phase - expected to FAIL) ===");
+        // ==================== S/MUX2 TEST ====================
+        $display("\n=== S/MUX2 Test (96kHz 4ch mode) ===");
         
         // テストデータ設定 (8チャンネル分のデータを用意)
         test_user_smux2 = 4'b0000;  // user_in[2]は自動的に1になる
@@ -391,12 +391,12 @@ module tb_adat_rx;
             end
         end
         
-        $display("\n=== S/MUX2 Test Results (RED phase) ===");
-        $display("Expected failures: %0d", smux2_errors);
+        $display("\n=== S/MUX2 Test Results ===");
+        $display("Errors: %0d", smux2_errors);
         if (smux2_errors > 0) begin
-            $display("*** S/MUX2 TEST FAILED AS EXPECTED (RED phase is CORRECT) ***");
+            $display("*** S/MUX2 TEST FAILED ***");
         end else begin
-            $display("*** S/MUX2 TEST PASSED (UNEXPECTED - should be RED phase) ***");
+            $display("*** S/MUX2 TEST PASSED ***");
         end
         
         #1000;
