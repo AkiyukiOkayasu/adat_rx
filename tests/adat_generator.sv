@@ -8,7 +8,8 @@
 
 module adat_generator #(
     parameter int CLK_FREQ = 100_000_000,  // システムクロック周波数
-    parameter int SAMPLE_RATE = 48000      // サンプルレート
+    parameter int SAMPLE_RATE = 48000,     // サンプルレート
+    parameter int SMUX2_MODE = 0           // S/MUX2モード (0=通常, 1=S/MUX2)
 ) (
     input  logic        clk,
     input  logic        rst_n,
@@ -62,13 +63,23 @@ module adat_generator #(
     
     // フレームデータ構築
     logic [255:0] build_frame;
+    logic [3:0] effective_user_in;  // S/MUX2モードを考慮したユーザーデータ
+    
+    // S/MUX2モードの場合、user_in[2]を強制的に1にする
+    always_comb begin
+        effective_user_in = user_in;
+        if (SMUX2_MODE == 1) begin
+            effective_user_in[2] = 1'b1;
+        end
+    end
+    
     always_comb begin
         // Sync: 10ビットの0
         build_frame[255:246] = 10'b0000000000;
         // Pre-user sync bit
         build_frame[245] = 1'b1;
         // User data (4bit)
-        build_frame[244:241] = user_in;
+        build_frame[244:241] = effective_user_in;
         // Post-user sync bit
         build_frame[240] = 1'b1;
         // 8チャンネル × 30ビット = 240ビット
