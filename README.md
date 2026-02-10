@@ -8,6 +8,7 @@ ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号
 
 - 8チャンネル24bit PCMデータの受信・デコード完了
 - 4bitユーザーデータの抽出完了
+- サンプルレート対応: 48kHz, 44.1kHz, 96kHz (S/MUX2), 88.2kHz (S/MUX2)
 - 厳密比較テストパス（`just run`）
 - 全ユニットテストパス（`just unit-tests`）
 
