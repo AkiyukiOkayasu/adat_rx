@@ -493,15 +493,14 @@ module tb_adat_rx;
         smux2_errors = 0;
         valid_count_per_frame = 0;
         
-        // 1フレーム分のo_validパルスをカウント
+        // 1フレーム分のo_validパルスをカウント (クロック周波数非依存)
         @(posedge gen_done_smux2);
-        #10;
+        @(negedge gen_done_smux2);  // frame_doneパルスが終わるまで待つ
         fork
             begin
-                repeat (5000) begin
+                repeat (10000) begin
                     @(posedge clk);
                     if (valid) valid_count_per_frame = valid_count_per_frame + 1;
-                    if (gen_done_smux2) break;
                 end
             end
             begin
@@ -592,15 +591,14 @@ module tb_adat_rx;
         smux2_errors = 0;
         valid_count_per_frame = 0;
         
-        // 1フレーム分のo_validパルスをカウント
+        // 1フレーム分のo_validパルスをカウント (クロック周波数非依存)
         @(posedge gen_done_smux2_88k);
-        #10;
+        @(negedge gen_done_smux2_88k);  // frame_doneパルスが終わるまで待つ
         fork
             begin
-                repeat (5000) begin
+                repeat (10000) begin
                     @(posedge clk);
                     if (valid) valid_count_per_frame = valid_count_per_frame + 1;
-                    if (gen_done_smux2_88k) break;
                 end
             end
             begin
