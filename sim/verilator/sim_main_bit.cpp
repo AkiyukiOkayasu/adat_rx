@@ -4,26 +4,26 @@
 #include "verilated_fst_c.h"
 #endif
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-    Vtb_bit_decoder* top = new Vtb_bit_decoder;
+int main(int argc, char **argv) {
+  Verilated::commandArgs(argc, argv);
+  Vtb_bit_decoder *top = new Vtb_bit_decoder;
 #if VM_TRACE
-    Verilated::traceEverOn(true);
-    VerilatedFstC* tfp = new VerilatedFstC;
-    top->trace(tfp, 99);
-    tfp->open("tb_bit_decoder.fst");
+  Verilated::traceEverOn(true);
+  VerilatedFstC *tfp = new VerilatedFstC;
+  top->trace(tfp, 99);
+  tfp->open("tb_bit_decoder.fst");
 #endif
-    while (!Verilated::gotFinish()) {
-        top->eval();
+  while (!Verilated::gotFinish()) {
+    top->eval();
 #if VM_TRACE
-        tfp->dump(Verilated::time());
+    tfp->dump(Verilated::time());
 #endif
-        Verilated::timeInc(1);
-    }
+    Verilated::timeInc(1);
+  }
 #if VM_TRACE
-    tfp->close();
-    delete tfp;
+  tfp->close();
+  delete tfp;
 #endif
-    delete top;
-    return 0;
+  delete top;
+  return 0;
 }
