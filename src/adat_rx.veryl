@@ -52,7 +52,7 @@ import adat_pkg::*;
 /// # 使用例
 /// ```veryl
 /// inst adat: adat_rx (
-///     i_clk     : sys_clk_100mhz,
+///     i_clk     : sys_clk_50mhz,
 ///     i_rst     : reset,
 ///     i_adat    : toslink_in,
 ///     o_channels: audio_out,
@@ -61,10 +61,10 @@ import adat_pkg::*;
 /// ```
 ///
 /// # タイミング
-/// - 推奨クロック: 100MHz
+/// - 推奨クロック: 50MHz
 /// - ADAT入力: TOSLINK光→電気変換済み信号
 pub module adat_rx (
-    /// システムクロック (100MHz推奨)
+    /// システムクロック (50MHz推奨)
     i_clk: input clock,
     /// アクティブハイリセット
     i_rst: input reset,
