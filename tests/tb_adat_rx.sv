@@ -1,8 +1,4 @@
-// ADAT受信器テストベンチ
-//
-// adat_rxモジュールの検証を行う。
-// ADATジェネレータで生成したテストパターンをデコードし、
-// 生成データと完全一致することを確認する。
+// ADAT受信器テストベンチ: ジェネレータ生成データとの厳密比較
 
 `timescale 1ns / 1ps
 
@@ -117,7 +113,7 @@ module tb_adat_rx;
     logic adat_in_muxed;
     assign adat_in_muxed = gen_start_smux2_88k ? adat_in_smux2_88k : (gen_start_smux2 ? adat_in_smux2 : (gen_start_44k ? adat_in_44k : adat_in));
     
-    // DUT internal probes for debugging
+    // DUT内部プローブ(デバッグ用)
      logic        dbg_adat_edge;
      logic        dbg_adat_synced;
      logic [11:0] dbg_frame_time;
@@ -146,7 +142,6 @@ module tb_adat_rx;
          .o_valid_channels(valid_channels)
      );
     
-    // Probe internal signals
     assign dbg_adat_edge = u_dut.adat_edge;
     assign dbg_adat_synced = u_dut.synced;
     assign dbg_frame_time = u_dut.frame_time;
@@ -194,7 +189,7 @@ module tb_adat_rx;
         $display("Clock: 50MHz, Sample Rate: 48kHz");
         $display("=== ADAT Receiver Test (Strict Comparison) ===");
         
-        // 初期化 (DUTはアクティブローリセット)
+        // 初期化 (DUT: アクティブローリセット)
         rst = 0;
         gen_start = 0;
         frame_count = 0;
@@ -225,11 +220,9 @@ module tb_adat_rx;
         // 連続フレーム送信を開始（startを保持すると連続生成される）
         gen_start = 1;
         
-        // 最初のフレーム送信時にエッジ検出をモニター（非ブロッキング）
         $display("\n--- Monitoring first frame ---");
         fork
             begin
-                // エッジ監視（join_noneで非ブロッキング実行）
                 int edge_count = 0;
                 int timeout = 0;
                 while (edge_count < 100 && timeout < 50000) begin
@@ -270,7 +263,6 @@ module tb_adat_rx;
                  boundary_pass[0], boundary_pass[1], boundary_pass[2], boundary_pass[3],
                  boundary_pass[4], boundary_pass[5], boundary_pass[6], boundary_pass[7]);
         
-        // Debug output
         $display("\n=== Debug Info ===");
         $display("adat_in: %b", adat_in);
         $display("ADAT edge: %b, Synced: %b", dbg_adat_edge, dbg_adat_synced);
