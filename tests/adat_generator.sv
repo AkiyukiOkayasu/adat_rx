@@ -20,7 +20,7 @@ module adat_generator #(
     output logic        frame_done         // フレーム完了
 );
 
-    // 1ビットあたりのクロック数 (44.1kHz: ~4.43, 48kHz: ~4.07)
+    // 1bitあたりのクロック数 (44.1kHz: ~4.43, 48kHz: ~4.07)
     localparam int  BIT_RATE = SAMPLE_RATE * 256;
     localparam int  CLOCKS_PER_BIT_INT = CLK_FREQ / BIT_RATE;
     localparam real CLOCKS_PER_BIT_REAL = (1.0 * CLK_FREQ) / BIT_RATE;
@@ -53,7 +53,8 @@ module adat_generator #(
     logic         current_bit;     // 現在のビット
     logic         nrzi_level;      // NRZI出力レベル
     
-    // 24ビットを30ビットにエンコード (4ビット + 1ビット同期) × 6
+    // 24bitを30bitにエンコード (4ビット + 1ビット同期) × 6
+    // 同期用セパレーターをLSBに配置
     function automatic logic [29:0] encode_24bit(input logic [23:0] data);
         logic [29:0] encoded;
         encoded[29:25] = {data[23:20], 1'b1};  // ニブル5 + sync
@@ -90,7 +91,7 @@ module adat_generator #(
         build_frame[244:241] = effective_user_in;
         // Post-user sync bit
         build_frame[240] = 1'b1;
-        // 8チャンネル × 30ビット = 240ビット
+        // 8ch × 30bit = 240bit
         build_frame[239:210] = encode_24bit(audio_in[0]);
         build_frame[209:180] = encode_24bit(audio_in[1]);
         build_frame[179:150] = encode_24bit(audio_in[2]);
