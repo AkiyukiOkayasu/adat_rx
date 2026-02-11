@@ -19,18 +19,19 @@
 /// ], config: {hscale: 2}}
 /// ```
 pub package adat_pkg {
-    /// サンプルレートモード
+    /// S/MUX mode
     ///
-    /// ADATプロトコルはS/MUXを使用して高サンプルレートに対応:
-    /// - Rate48kHz: 44.1kHz / 48kHz (8チャンネル)
-    /// - Rate96kHz: 88.2kHz / 96kHz (4チャンネル S/MUX2)
-    /// - Rate192kHz: 176.4kHz / 192kHz (2チャンネル S/MUX4)
-    enum SampleRate: logic<2> {
-        /// 44.1kHz / 48kHz - 8チャンネル
-        Rate48kHz = 2'b00,
-        /// 88.2kHz / 96kHz - 4チャンネル (S/MUX2)
-        Rate96kHz = 2'b01,
-        /// 176.4kHz / 192kHz - 2チャンネル (S/MUX4)
-        Rate192kHz = 2'b10,
+    /// ADATプロトコルはS/MUXを使用して高サンプルレートに対応
+    /// - Standard: 44.1kHz / 48kHz 8ch
+    /// - S/MUX2: 88.2kHz / 96kHz 4ch
+    /// - S/MUX4: 176.4kHz / 192kHz 2ch
+    enum SmuxMode {
+        /// 44.1kHz / 48kHz - 8ch
+        Standard,
+        /// S/MUX2 88.2kHz / 96kHz - 4ch
+        Smux2,
+        /// S/MUX4 176.4kHz / 192kHz - 2ch
+        /// warning: 現時点の実装ではS/MUX4は未対応
+        Smux4,
     }
 }

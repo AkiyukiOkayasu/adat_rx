@@ -1,4 +1,4 @@
-import adat_pkg::*;
+import adat_pkg::SmuxMode;
 
 /// 出力インターフェース
 ///
@@ -45,7 +45,7 @@ pub module output_interface (
     /// ユーザービット入力
     i_user_bits: input logic<4>,
     /// 検出されたサンプルレート
-    o_sample_rate: output SampleRate,
+    o_sample_rate: output SmuxMode,
     /// ワードクロック出力
     o_word_clk: output logic,
     /// 8チャンネルPCMデータ出力
@@ -58,7 +58,7 @@ pub module output_interface (
     o_valid_channels: output logic<4>,
 ) {
     // サンプルレートレジスタ
-    var sample_rate: SampleRate;
+    var sample_rate: SmuxMode;
     // ワードクロックカウンタ
     var word_clk_cnt: logic<12>;
     // ワードクロック出力
@@ -82,9 +82,9 @@ pub module output_interface (
     // サンプルレート出力（S/MUX2検出結果を反映）
     always_comb {
         if smux2_mode {
-            sample_rate = SampleRate::Rate96kHz;
+            sample_rate = SmuxMode::Smux2;
         } else {
-            sample_rate = SampleRate::Rate48kHz;
+            sample_rate = SmuxMode::Standard;
         }
     }
 

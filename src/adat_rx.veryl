@@ -1,4 +1,4 @@
-import adat_pkg::*;
+import adat_pkg::SmuxMode;
 
 /// ADATレシーバ トップモジュール
 ///
@@ -75,7 +75,7 @@ pub module adat_rx (
     /// ワードクロック出力
     o_word_clk: output logic,
     /// 検出されたサンプルレート
-    o_sample_rate: output SampleRate,
+    o_sample_rate: output SmuxMode,
     /// 8チャンネルPCMデータ出力
     o_channels: output logic<24> [8],
     /// データ有効信号
