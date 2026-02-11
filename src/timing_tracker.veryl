@@ -75,14 +75,7 @@ pub module timing_tracker (
         if_reset {
             cur_time  = 12'd0;
             edge_time = 12'd0;
-            // 初期値を「4クロック/bit × 5ビット = 20クロック」に設定 (50MHz)
-            // これにより、5ビットまでのデータ期間はsync_mask=1、同期期間はsync_mask=0になる
-            // 20/4 = 5、threshold = 5 * 0.75 = 3.75 → 3
-            // データ期間(最大20クロック): cur_time/4 = 5 > 3 → うまくいかない…
-            // 理想的にはmax_timeを10に設定: threshold=7.5→7
-            // データ(最大20): cur_time/4=5 < 7 → sync_mask=1 ✓
-            // 同期(40): cur_time/4=10 > 7 → sync_mask=0 ✓
-            max_time   = 10'd10; // 40クロック / 4 = 10 (cur_time[11:2]単位, 50MHz)
+            max_time   = 10'd10; // 初期値: 40クロック/4 = 10 (cur_time[11:2], 50MHz)
             wait_count = 16'd0;
         } else if i_edge {
             // エッジでカウンタをリセット、最大値を更新

@@ -20,9 +20,7 @@ module adat_generator #(
     output logic        frame_done         // フレーム完了
 );
 
-    // 1ビットあたりのクロック数（実数累積）
-    // 44.1kHz: 50MHz / 11.2896MHz ≈ 4.43 clocks/bit
-    // 48kHz:   50MHz / 12.288MHz ≈ 4.07 clocks/bit
+    // 1ビットあたりのクロック数 (44.1kHz: ~4.43, 48kHz: ~4.07)
     localparam int  BIT_RATE = SAMPLE_RATE * 256;
     localparam int  CLOCKS_PER_BIT_INT = CLK_FREQ / BIT_RATE;
     localparam real CLOCKS_PER_BIT_REAL = (1.0 * CLK_FREQ) / BIT_RATE;
@@ -71,13 +69,11 @@ module adat_generator #(
     logic [255:0] build_frame;
     logic [3:0] effective_user_in;  // S/MUX2モードを考慮したユーザーデータ
     
-    // S/MUX2モードの場合、U2 (ADAT user bit 2)を強制的に1にする
-    // effective_user_in[1]がフレームビット242に対応し、これがU2となる
+    // ユーザービット調整: S/MUX2はU2=1, 44.1kHzはニブル回転
     always_comb begin
         effective_user_in = user_in;
 
-        // 44.1kHz系ではuser nibbleを事前に回転して整合を取る
-        // (i_bit_countが可変長で到達する境界との差分を吸収)
+        // 44.1kHz系ではuser nibbleを回転して整合を取る
         if ((SAMPLE_RATE == 44100) && (SMUX2_MODE == 0)) begin
             effective_user_in = {user_in[3], user_in[0], user_in[1], user_in[2]};
         end
@@ -88,9 +84,7 @@ module adat_generator #(
     end
     
     always_comb begin
-        // Sync: 10ビットの0
-        build_frame[255:246] = 10'b0000000000;
-        // Pre-user sync bit
+        build_frame[255:246] = 10'b0000000000; // Sync
         build_frame[245] = 1'b1;
         // User data (4bit)
         build_frame[244:241] = effective_user_in;
@@ -155,7 +149,7 @@ module adat_generator #(
 
                             bit_counter <= bit_counter + 8'd1;
 
-                            // 実数累積を丸めた境界差分で次ビット幅を決定する
+                            // 次ビット幅を実数累積から決定
                             next_phase_clocks = bit_phase_clocks + CLOCKS_PER_BIT_REAL;
                             next_edge_clocks = $rtoi(next_phase_clocks + 0.5);
 

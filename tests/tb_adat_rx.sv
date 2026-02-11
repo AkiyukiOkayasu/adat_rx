@@ -35,7 +35,6 @@ module tb_adat_rx;
         forever #10 clk = ~clk;
     end
     
-    // ADATジェネレータ
     // ADATジェネレータ (通常モード)
     adat_generator #(
         .CLK_FREQ(50_000_000),
@@ -230,7 +229,7 @@ module tb_adat_rx;
         $display("\n--- Monitoring first frame ---");
         fork
             begin
-                // エッジ検出モニター（join_noneで非ブロッキング実行）
+                // エッジ監視（join_noneで非ブロッキング実行）
                 int edge_count = 0;
                 int timeout = 0;
                 while (edge_count < 100 && timeout < 50000) begin
