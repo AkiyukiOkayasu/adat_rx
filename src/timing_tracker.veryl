@@ -73,8 +73,8 @@ pub module timing_tracker (
     // 遷移間時間カウンタと最大時間追跡
     always_ff (i_clk, i_rst) {
         if_reset {
-            cur_time  = 12'd0;
-            edge_time = 12'd0;
+            cur_time   = 12'd0;
+            edge_time  = 12'd0;
             max_time   = 10'd10; // 初期値: 40クロック/4 = 10 (cur_time[11:2], 50MHz)
             wait_count = 16'd0;
         } else if i_edge {
