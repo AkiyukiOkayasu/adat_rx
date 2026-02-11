@@ -75,14 +75,14 @@ pub module timing_tracker (
         if_reset {
             cur_time  = 12'd0;
             edge_time = 12'd0;
-            // 初期値を「8クロック/bit × 5ビット = 40クロック」に設定
+            // 初期値を「4クロック/bit × 5ビット = 20クロック」に設定 (50MHz)
             // これにより、5ビットまでのデータ期間はsync_mask=1、同期期間はsync_mask=0になる
-            // 40/4 = 10、threshold = 10 * 0.75 = 7.5 → 7
-            // データ期間(最大40クロック): cur_time/4 = 10 > 7 → うまくいかない…
-            // 理想的にはmax_timeを20に設定: threshold=15
-            // データ(最大40): cur_time/4=10 < 15 → sync_mask=1 ✓
-            // 同期(80): cur_time/4=20 > 15 → sync_mask=0 ✓
-            max_time   = 10'd20; // 80クロック / 4 = 20 (i_edge_time[11:2]単位)
+            // 20/4 = 5、threshold = 5 * 0.75 = 3.75 → 3
+            // データ期間(最大20クロック): cur_time/4 = 5 > 3 → うまくいかない…
+            // 理想的にはmax_timeを10に設定: threshold=7.5→7
+            // データ(最大20): cur_time/4=5 < 7 → sync_mask=1 ✓
+            // 同期(40): cur_time/4=10 > 7 → sync_mask=0 ✓
+            max_time   = 10'd10; // 40クロック / 4 = 10 (cur_time[11:2]単位, 50MHz)
             wait_count = 16'd0;
         } else if i_edge {
             // エッジでカウンタをリセット、最大値を更新
@@ -120,7 +120,7 @@ pub module timing_tracker (
         if_reset {
             sync_ff        = 2'b00;
             frame_count    = 12'd0;
-            frame_time     = 12'd2083;
+            frame_time     = 12'd1042;
             have_prev_sync = 1'b0;
         } else {
             sync_ff[1] = sync_ff[0];
