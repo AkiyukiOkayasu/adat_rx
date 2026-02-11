@@ -29,16 +29,16 @@ module tb_adat_rx;
     logic        gen_start;
     logic        gen_done;
     
-    // クロック生成 (100MHz)
+    // クロック生成 (50MHz)
     initial begin
         clk = 0;
-        forever #5 clk = ~clk;
+        forever #10 clk = ~clk;
     end
     
     // ADATジェネレータ
     // ADATジェネレータ (通常モード)
     adat_generator #(
-        .CLK_FREQ(100_000_000),
+        .CLK_FREQ(50_000_000),
         .SAMPLE_RATE(48000),
         .SMUX2_MODE(0)
     ) u_gen (
@@ -59,7 +59,7 @@ module tb_adat_rx;
     logic [3:0]  test_user_44k;
     
     adat_generator #(
-        .CLK_FREQ(100_000_000),
+        .CLK_FREQ(50_000_000),
         .SAMPLE_RATE(44100),
         .SMUX2_MODE(0)
     ) u_gen_44k (
@@ -80,7 +80,7 @@ module tb_adat_rx;
     logic [3:0]  test_user_smux2;
     
     adat_generator #(
-        .CLK_FREQ(100_000_000),
+        .CLK_FREQ(50_000_000),
         .SAMPLE_RATE(48000),
         .SMUX2_MODE(1)
     ) u_gen_smux2 (
@@ -101,7 +101,7 @@ module tb_adat_rx;
     logic [3:0]  test_user_smux2_88k;
     
     adat_generator #(
-        .CLK_FREQ(100_000_000),
+        .CLK_FREQ(50_000_000),
         .SAMPLE_RATE(44100),
         .SMUX2_MODE(1)
     ) u_gen_smux2_88k (
@@ -192,7 +192,7 @@ module tb_adat_rx;
     int valid_count_per_frame;
     
     initial begin
-        $display("Clock: 100MHz, Sample Rate: 48kHz");
+        $display("Clock: 50MHz, Sample Rate: 48kHz");
         $display("=== ADAT Receiver Test (Strict Comparison) ===");
         
         // 初期化 (DUTはアクティブローリセット)
@@ -346,7 +346,7 @@ module tb_adat_rx;
         
         // ==================== 44.1kHz TEST ====================
         $display("\n=== 44.1kHz Test ===");
-        $display("Clock: 100MHz, Sample Rate: 44.1kHz");
+         $display("Clock: 50MHz, Sample Rate: 44.1kHz");
         
         // テストデータ設定
         test_user_44k = 4'hB;

@@ -7,7 +7,7 @@
 `timescale 1ns / 1ps
 
 module adat_generator #(
-    parameter int CLK_FREQ = 100_000_000,  // システムクロック周波数
+    parameter int CLK_FREQ = 50_000_000,   // システムクロック周波数
     parameter int SAMPLE_RATE = 48000,     // サンプルレート
     parameter int SMUX2_MODE = 0           // S/MUX2モード (0=通常, 1=S/MUX2)
 ) (
@@ -21,8 +21,8 @@ module adat_generator #(
 );
 
     // 1ビットあたりのクロック数（実数累積）
-    // 44.1kHz: 100MHz / 11.2896MHz ≈ 8.86 clocks/bit
-    // 48kHz:   100MHz / 12.288MHz ≈ 8.14 clocks/bit
+    // 44.1kHz: 50MHz / 11.2896MHz ≈ 4.43 clocks/bit
+    // 48kHz:   50MHz / 12.288MHz ≈ 4.07 clocks/bit
     localparam int  BIT_RATE = SAMPLE_RATE * 256;
     localparam int  CLOCKS_PER_BIT_INT = CLK_FREQ / BIT_RATE;
     localparam real CLOCKS_PER_BIT_REAL = (1.0 * CLK_FREQ) / BIT_RATE;

@@ -11,7 +11,7 @@ module tb_timing_tracker;
 
     initial begin
         clk = 0;
-        forever #5 clk = ~clk;
+        forever #10 clk = ~clk;
     end
 
     adat_rx_timing_tracker u_dut (
@@ -44,18 +44,18 @@ module tb_timing_tracker;
         rst = 1'b1;
         repeat (2) @(posedge clk);
 
-        if (max_time !== 10'd20) begin
+        if (max_time !== 10'd10) begin
             $display("FAIL: max_time init %0d", max_time);
             pass = 0;
         end
 
-        pulse_edge(8);
+        pulse_edge(4);
         if (sync_detect !== 1'b1) begin
             $display("FAIL: sync_detect should be 1 for short interval");
             pass = 0;
         end
 
-        pulse_edge(80);
+        pulse_edge(40);
         if (sync_detect !== 1'b0) begin
             $display("FAIL: sync_detect should be 0 for long interval");
             pass = 0;
