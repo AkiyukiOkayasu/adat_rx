@@ -516,9 +516,9 @@ module tb_adat_rx;
     // サンプルレートチェック
     $display("S/MUX2: user_out (user_bits): %b", user_out);
     $display("S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
-    $display("S/MUX2: o_sample_rate: %s (expected: Rate96kHz)", smux_mode.name());
+    $display("S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
     if (smux_mode != SmuxMode_Smux2) begin
-      $display("  FAIL (expected): Sample rate not Rate96kHz");
+      $display("  FAIL (expected): S/MUX mode is not S/MUX2");
       smux2_errors = smux2_errors + 1;
     end
 
@@ -614,9 +614,9 @@ module tb_adat_rx;
     // サンプルレートチェック
     $display("88.2kHz S/MUX2: user_out (user_bits): %b", user_out);
     $display("88.2kHz S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
-    $display("88.2kHz S/MUX2: o_sample_rate: %s (expected: Rate96kHz)", smux_mode.name());
+    $display("88.2kHz S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
     if (smux_mode != SmuxMode_Smux2) begin
-      $display("  88.2kHz FAIL (expected): Sample rate not Rate96kHz");
+      $display("  88.2kHz FAIL (expected): S/MUX mode is not S/MUX2");
       smux2_errors = smux2_errors + 1;
     end
 

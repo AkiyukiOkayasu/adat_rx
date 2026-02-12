@@ -58,14 +58,8 @@ help:
 unit-tests: veryl
   #!/usr/bin/env bash
   set -euo pipefail
-  for mod in edge_detector timing_tracker bit_decoder frame_parser output_interface; do
+  for mod in timing_tracker bit_decoder frame_parser output_interface; do
     case "$mod" in
-      edge_detector)
-        top=tb_edge_detector
-        tb="{{PROJ_ROOT}}/tests/tb_edge_detector.sv"
-        rtl="{{PROJ_ROOT}}/target/edge_detector.sv"
-        main=sim_main_edge.cpp
-        ;;
       timing_tracker)
         top=tb_timing_tracker
         tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
@@ -99,13 +93,8 @@ unit-tests: veryl
 unit-tests-trace: veryl
   #!/usr/bin/env bash
   set -euo pipefail
-  for mod in edge_detector timing_tracker bit_decoder frame_parser output_interface; do
+  for mod in timing_tracker bit_decoder frame_parser output_interface; do
     case "$mod" in
-      edge_detector)
-        top=tb_edge_detector
-        tb="{{PROJ_ROOT}}/tests/tb_edge_detector.sv"
-        main=sim_main_edge.cpp
-        ;;
       timing_tracker)
         top=tb_timing_tracker
         tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"

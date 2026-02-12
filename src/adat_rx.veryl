@@ -102,13 +102,23 @@ pub module adat_rx (
     var channel   : logic<3> ;
     var data_valid: logic    ;
 
-    // エッジ検出モジュール
-    inst u_edge_detector: edge_detector (
-        i_clk   : i_clk    ,
-        i_rst   : i_rst    ,
-        i_adat  : i_adat   ,
-        o_edge  : adat_edge,
-        o_synced: synced   ,
+    // 非同期ADAT入力の同期化
+    inst u_sync: $std::synchronizer_basic (
+        i_clk        ,
+        i_rst        ,
+        i_d  : i_adat,
+        o_d  : synced,
+    );
+
+    // エッジ検出
+    inst u_edge_detector: $std::edge_detector (
+        i_clk               ,
+        i_rst               ,
+        i_clear  : 0        ,
+        i_data   : synced   ,
+        o_edge   : adat_edge,
+        o_posedge: _        ,
+        o_negedge: _        ,
     );
 
     // タイミング追跡モジュール
