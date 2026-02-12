@@ -3,7 +3,7 @@
 module tb_output_interface;
   import adat_rx_adat_pkg::*;
 
-  typedef adat_rx_adat_pkg::SampleRate SampleRate;
+  typedef adat_rx_adat_pkg::SmuxMode SmuxMode;
 
   logic clk;
   logic rst;
@@ -13,7 +13,7 @@ module tb_output_interface;
   logic data_valid;
   logic sync;
   logic [3:0] user_bits;
-  SampleRate sample_rate;
+  SmuxMode smux_mode;
   logic word_clk;
   logic [23:0] channels[0:7];
   logic valid;
@@ -34,7 +34,7 @@ module tb_output_interface;
       .i_data_valid(data_valid),
       .i_sync(sync),
       .i_user_bits(user_bits),
-      .o_sample_rate(sample_rate),
+      .o_smux_mode(smux_mode),
       .o_word_clk(word_clk),
       .o_channels(channels),
       .o_valid(valid),
@@ -86,8 +86,8 @@ module tb_output_interface;
       $display("FAIL: locked not asserted");
       pass = 0;
     end
-    if (sample_rate !== SampleRate_Rate48kHz) begin
-      $display("FAIL: sample_rate not 48kHz");
+    if (smux_mode !== SmuxMode_Standard) begin
+      $display("FAIL: smux_mode not Standard");
       pass = 0;
     end
     if (valid_channels !== 4'd8) begin
@@ -109,8 +109,8 @@ module tb_output_interface;
       $display("FAIL: locked not asserted in S/MUX2");
       pass = 0;
     end
-    if (sample_rate !== SampleRate_Rate96kHz) begin
-      $display("FAIL: sample_rate should be 96kHz in S/MUX2, got %d", sample_rate);
+    if (smux_mode !== SmuxMode_Smux2) begin
+      $display("FAIL: smux_mode should be SmuxMode_Smux2 in S/MUX2, got %d", smux_mode);
       pass = 0;
     end
     if (valid_channels !== 4'd4) begin

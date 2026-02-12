@@ -135,7 +135,7 @@ module tb_adat_rx;
       .i_adat(adat_in_muxed),
       .o_user(user_out),
       .o_word_clk(word_clk),
-      .o_sample_rate(smux_mode),
+      .o_smux_mode(smux_mode),
       .o_channels(channels),
       .o_valid(valid),
       .o_locked(locked),

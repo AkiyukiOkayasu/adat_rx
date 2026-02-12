@@ -44,8 +44,8 @@ pub module output_interface (
     i_sync: input logic,
     /// ユーザービット入力
     i_user_bits: input logic<4>,
-    /// 検出されたサンプルレート
-    o_sample_rate: output SmuxMode,
+    /// 検出されたS/MUXモード
+    o_smux_mode: output SmuxMode,
     /// ワードクロック出力
     o_word_clk: output logic,
     /// 8チャンネルPCMデータ出力
@@ -57,8 +57,8 @@ pub module output_interface (
     /// 有効なチャンネル数
     o_valid_channels: output logic<4>,
 ) {
-    // サンプルレートレジスタ
-    var sample_rate: SmuxMode;
+    // S/MUXモードレジスタ
+    var smux_mode: SmuxMode;
     // ワードクロックカウンタ
     var word_clk_cnt: logic<12>;
     // ワードクロック出力
@@ -79,19 +79,19 @@ pub module output_interface (
     // S/MUX2モード検出 (ADAT User Bit 2 → i_user_bits[1])
     assign smux2_mode = i_user_bits[1];
 
-    // サンプルレート出力（S/MUX2検出結果を反映）
+    // S/MUXモード出力（S/MUX2検出結果を反映）
     always_comb {
         if smux2_mode {
-            sample_rate = SmuxMode::Smux2;
+            smux_mode = SmuxMode::Smux2;
         } else {
-            sample_rate = SmuxMode::Standard;
+            smux_mode = SmuxMode::Standard;
         }
     }
 
-    assign o_sample_rate = sample_rate;
-    assign o_word_clk    = word_clk;
-    assign o_valid       = valid_out;
-    assign o_locked      = locked;
+    assign o_smux_mode = smux_mode;
+    assign o_word_clk  = word_clk;
+    assign o_valid     = valid_out;
+    assign o_locked    = locked;
 
     always_comb {
         if smux2_mode {

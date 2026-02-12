@@ -74,8 +74,8 @@ pub module adat_rx (
     o_user: output logic<4>,
     /// ワードクロック出力
     o_word_clk: output logic,
-    /// 検出されたサンプルレート
-    o_sample_rate: output SmuxMode,
+    /// 検出されたS/MUXモード
+    o_smux_mode: output SmuxMode,
     /// 8チャンネルPCMデータ出力
     o_channels: output logic<24> [8],
     /// データ有効信号
@@ -168,7 +168,7 @@ pub module adat_rx (
         i_data_valid    : data_valid      ,
         i_sync          : sync_detect     ,
         i_user_bits     : user_bits       ,
-        o_sample_rate   : o_sample_rate   ,
+        o_smux_mode     : o_smux_mode     ,
         o_word_clk      : o_word_clk      ,
         o_channels      : o_channels      ,
         o_valid         : o_valid         ,
