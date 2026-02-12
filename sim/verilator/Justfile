@@ -26,11 +26,11 @@ veryl: fmt
 
 # Verilatorビルド（トレースなし）
 build: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f files.f
+  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
 
 # Verilatorビルド（トレース付き）
 build-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f files.f
+  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
 
 # 実行（トレースなし）
 run: build
@@ -91,7 +91,7 @@ unit-tests: veryl
         main=sim_main_output.cpp
         ;;
     esac
-    {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module "$top" -Wno-DECLFILENAME -f "files_${mod}.f"
+    {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module "$top" -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f "$tb" "$main"
     ./{{OBJ_DIR}}/V"$top"
   done
 
@@ -100,6 +100,33 @@ unit-tests-trace: veryl
   #!/usr/bin/env bash
   set -euo pipefail
   for mod in edge_detector timing_tracker bit_decoder frame_parser output_interface; do
-    {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module "tb_${mod}" -Wno-DECLFILENAME -f "files_${mod}.f"
-    ./{{OBJ_DIR}}/Vtb_"$mod"
+    case "$mod" in
+      edge_detector)
+        top=tb_edge_detector
+        tb="{{PROJ_ROOT}}/tests/tb_edge_detector.sv"
+        main=sim_main_edge.cpp
+        ;;
+      timing_tracker)
+        top=tb_timing_tracker
+        tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
+        main=sim_main_timing.cpp
+        ;;
+      bit_decoder)
+        top=tb_bit_decoder
+        tb="{{PROJ_ROOT}}/tests/tb_bit_decoder.sv"
+        main=sim_main_bit.cpp
+        ;;
+      frame_parser)
+        top=tb_frame_parser
+        tb="{{PROJ_ROOT}}/tests/tb_frame_parser.sv"
+        main=sim_main_frame.cpp
+        ;;
+      output_interface)
+        top=tb_output_interface
+        tb="{{PROJ_ROOT}}/tests/tb_output_interface.sv"
+        main=sim_main_output.cpp
+        ;;
+    esac
+    {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module "$top" -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f "$tb" "$main"
+    ./{{OBJ_DIR}}/V"$top"
   done
