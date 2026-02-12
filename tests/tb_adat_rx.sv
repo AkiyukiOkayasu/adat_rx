@@ -274,7 +274,7 @@ module tb_adat_rx;
     $display("Locked: %b", locked);
 
     if (!locked) begin
-      $display("FAIL: Receiver not locked");
+      $error("FAIL: Receiver not locked");
       test_pass = 0;
       $finish;
     end else begin
@@ -297,7 +297,7 @@ module tb_adat_rx;
       disable fork;
 
       if (!got_valid) begin
-        $display("FAIL: Timeout waiting for valid");
+        $error("FAIL: Timeout waiting for valid");
         error_count++;
         test_pass = 0;
         $finish;
@@ -308,7 +308,7 @@ module tb_adat_rx;
       $display("\nFrame received, comparing all channels:");
       for (int i = 0; i < 8; i++) begin
         if (channels[i] !== test_audio[i]) begin
-          $display("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio[i], channels[i]);
+          $error("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio[i], channels[i]);
           error_count++;
           test_pass = 0;
         end else begin
@@ -317,7 +317,7 @@ module tb_adat_rx;
       end
 
       if (user_out !== test_user) begin
-        $display("  User data: FAIL - Expected: %h, Got: %h", test_user, user_out);
+        $error("  User data: FAIL - Expected: %h, Got: %h", test_user, user_out);
         error_count++;
         test_pass = 0;
       end else begin
@@ -334,7 +334,7 @@ module tb_adat_rx;
     if (test_pass && error_count == 0) begin
       $display("*** TEST PASSED ***");
     end else begin
-      $display("*** TEST FAILED ***");
+      $error("*** TEST FAILED ***");
     end
 
     // ==================== 44.1kHz TEST ====================
@@ -384,7 +384,7 @@ module tb_adat_rx;
     $display("Locked: %b", locked);
 
     if (!locked) begin
-      $display("44.1kHz FAIL: Receiver not locked");
+      $error("44.1kHz FAIL: Receiver not locked");
       test_pass = 0;
       $finish;
     end else begin
@@ -407,7 +407,7 @@ module tb_adat_rx;
       disable fork;
 
       if (!got_valid) begin
-        $display("44.1kHz FAIL: Timeout waiting for valid");
+        $error("44.1kHz FAIL: Timeout waiting for valid");
         error_count++;
         test_pass = 0;
         $finish;
@@ -418,8 +418,8 @@ module tb_adat_rx;
       $display("\n44.1kHz Frame received, comparing all channels:");
       for (int i = 0; i < 8; i++) begin
         if (channels[i] !== test_audio_44k[i]) begin
-          $display("  44.1kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_44k[i],
-                   channels[i]);
+          $error("  44.1kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_44k[i],
+                 channels[i]);
           error_count++;
           test_pass = 0;
         end else begin
@@ -428,7 +428,7 @@ module tb_adat_rx;
       end
 
       if (user_out !== test_user_44k) begin
-        $display("  44.1kHz User data: FAIL - Expected: %h, Got: %h", test_user_44k, user_out);
+        $error("  44.1kHz User data: FAIL - Expected: %h, Got: %h", test_user_44k, user_out);
         error_count++;
         test_pass = 0;
       end else begin
@@ -445,7 +445,7 @@ module tb_adat_rx;
     if (test_pass && error_count == 0) begin
       $display("*** 44.1kHz TEST PASSED ***");
     end else begin
-      $display("*** 44.1kHz TEST FAILED ***");
+      $error("*** 44.1kHz TEST FAILED ***");
     end
 
     // ==================== S/MUX2 TEST ====================
@@ -528,8 +528,8 @@ module tb_adat_rx;
     $display("S/MUX2: Checking data integrity...");
     for (int i = 0; i < 8; i = i + 1) begin
       if (channels[i] !== test_audio_smux2[i]) begin
-        $display("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2[i],
-                 channels[i]);
+        $error("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2[i],
+               channels[i]);
         smux2_errors = smux2_errors + 1;
       end else begin
         $display("  Channel %0d: PASS - %h", i, channels[i]);
@@ -539,7 +539,7 @@ module tb_adat_rx;
     $display("\n=== S/MUX2 Test Results ===");
     $display("Errors: %0d", smux2_errors);
     if (smux2_errors > 0) begin
-      $display("*** S/MUX2 TEST FAILED ***");
+      $error("*** S/MUX2 TEST FAILED ***");
     end else begin
       $display("*** S/MUX2 TEST PASSED ***");
     end
@@ -626,8 +626,8 @@ module tb_adat_rx;
     $display("88.2kHz S/MUX2: Checking data integrity...");
     for (int i = 0; i < 8; i = i + 1) begin
       if (channels[i] !== test_audio_smux2_88k[i]) begin
-        $display("  88.2kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2_88k[i],
-                 channels[i]);
+        $error("  88.2kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2_88k[i],
+               channels[i]);
         smux2_errors = smux2_errors + 1;
       end else begin
         $display("  88.2kHz Channel %0d: PASS - %h", i, channels[i]);
@@ -637,7 +637,7 @@ module tb_adat_rx;
     $display("\n=== 88.2kHz S/MUX2 Test Results ===");
     $display("Errors: %0d", smux2_errors);
     if (smux2_errors > 0) begin
-      $display("*** 88.2kHz S/MUX2 TEST FAILED ***");
+      $error("*** 88.2kHz S/MUX2 TEST FAILED ***");
     end else begin
       $display("*** 88.2kHz S/MUX2 TEST PASSED ***");
     end

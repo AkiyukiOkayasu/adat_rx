@@ -64,7 +64,7 @@ module tb_frame_parser;
     // So i_bits[0]=1, [1]=0, [2]=1, [3]=0, [4]=1 → i_bits = 5'b10101
     push_bits(5'b10101, 3'd5);
     if (user !== 4'b1010) begin
-      $display("FAIL: user expected 1010 got %b", user);
+      $error("FAIL: user expected 1010 got %b", user);
       pass = 0;
     end
 
@@ -75,7 +75,7 @@ module tb_frame_parser;
       push_bits(5'b11111, 3'd5);
     end
     if (!(data_valid && channel == 3'd0 && data == 24'hFFFFFF)) begin
-      $display("FAIL: ch0 data expected FFFFFF got %h", data);
+      $error("FAIL: ch0 data expected FFFFFF got %h", data);
       pass = 0;
     end
 
@@ -141,11 +141,11 @@ module tb_frame_parser;
 
     // Check if frame_parser extracts 24'h123456
     if (!(data_valid && channel == 3'd0)) begin
-      $display("FAIL: bit-order - data_valid=%b channel=%0d (expected valid, ch0)", data_valid,
-               channel);
+      $error("FAIL: bit-order - data_valid=%b channel=%0d (expected valid, ch0)", data_valid,
+             channel);
       pass = 0;
     end else if (data !== 24'h123456) begin
-      $display("FAIL: bit-order - Expected 123456 got %h", data);
+      $error("FAIL: bit-order - Expected 123456 got %h", data);
       pass = 0;
     end else begin
       $display("PASS: bit-order test");
@@ -154,7 +154,7 @@ module tb_frame_parser;
     if (pass) begin
       $display("*** TEST PASSED ***");
     end else begin
-      $display("*** TEST FAILED ***");
+      $error("*** TEST FAILED ***");
     end
 
     #20;

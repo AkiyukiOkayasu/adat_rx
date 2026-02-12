@@ -45,26 +45,26 @@ module tb_timing_tracker;
     repeat (2) @(posedge clk);
 
     if (max_time !== 10'd10) begin
-      $display("FAIL: max_time init %0d", max_time);
+      $error("FAIL: max_time init %0d", max_time);
       pass = 0;
     end
 
     pulse_edge(4);
     if (sync_detect !== 1'b1) begin
-      $display("FAIL: sync_detect should be 1 for short interval");
+      $error("FAIL: sync_detect should be 1 for short interval");
       pass = 0;
     end
 
     pulse_edge(40);
     if (sync_detect !== 1'b0) begin
-      $display("FAIL: sync_detect should be 0 for long interval");
+      $error("FAIL: sync_detect should be 0 for long interval");
       pass = 0;
     end
 
     if (pass) begin
       $display("*** TEST PASSED ***");
     end else begin
-      $display("*** TEST FAILED ***");
+      $error("*** TEST FAILED ***");
     end
 
     #20;

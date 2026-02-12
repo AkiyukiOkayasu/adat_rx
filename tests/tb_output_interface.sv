@@ -53,7 +53,7 @@ module tb_output_interface;
           data_valid = 1'b1;
           @(posedge clk);
           if (channel == 3'd7 && !valid) begin
-            $display("FAIL: valid not asserted on ch7");
+            $error("FAIL: valid not asserted on ch7");
             pass = 0;
           end
         end
@@ -83,15 +83,15 @@ module tb_output_interface;
     send_frame(5);
 
     if (!locked) begin
-      $display("FAIL: locked not asserted");
+      $error("FAIL: locked not asserted");
       pass = 0;
     end
     if (smux_mode !== SmuxMode_Standard) begin
-      $display("FAIL: smux_mode not Standard");
+      $error("FAIL: smux_mode not Standard");
       pass = 0;
     end
     if (valid_channels !== 4'd8) begin
-      $display("FAIL: valid_channels should be 8 in normal mode, got %d", valid_channels);
+      $error("FAIL: valid_channels should be 8 in normal mode, got %d", valid_channels);
       pass = 0;
     end
 
@@ -106,22 +106,22 @@ module tb_output_interface;
     send_frame(5);
 
     if (!locked) begin
-      $display("FAIL: locked not asserted in S/MUX2");
+      $error("FAIL: locked not asserted in S/MUX2");
       pass = 0;
     end
     if (smux_mode !== SmuxMode_Smux2) begin
-      $display("FAIL: smux_mode should be SmuxMode_Smux2 in S/MUX2, got %d", smux_mode);
+      $error("FAIL: smux_mode should be SmuxMode_Smux2 in S/MUX2, got %d", smux_mode);
       pass = 0;
     end
     if (valid_channels !== 4'd4) begin
-      $display("FAIL: valid_channels should be 4 in S/MUX2 mode, got %d", valid_channels);
+      $error("FAIL: valid_channels should be 4 in S/MUX2 mode, got %d", valid_channels);
       pass = 0;
     end
 
     if (pass) begin
       $display("*** TEST PASSED ***");
     end else begin
-      $display("*** TEST FAILED ***");
+      $error("*** TEST FAILED ***");
     end
 
     #20;

@@ -52,33 +52,33 @@ module tb_bit_decoder;
 
     trigger_edge(12'd1);
     if (!(valid && bit_count == 3'd1 && bits == 5'b00001)) begin
-      $display("FAIL: 1-bit decode");
+      $error("FAIL: 1-bit decode");
       pass = 0;
     end
 
     trigger_edge(12'd16);
     if (!(valid && bit_count == 3'd2 && bits == 5'b00010)) begin
-      $display("FAIL: 2-bit decode");
+      $error("FAIL: 2-bit decode");
       pass = 0;
     end
 
     trigger_edge(12'd40);
     if (!(valid && bit_count == 3'd5 && bits == 5'b10000)) begin
-      $display("FAIL: 5-bit decode");
+      $error("FAIL: 5-bit decode");
       pass = 0;
     end
 
     sync_mask = 1'b0;
     trigger_edge(12'd1);
     if (valid) begin
-      $display("FAIL: valid should be 0 during sync");
+      $error("FAIL: valid should be 0 during sync");
       pass = 0;
     end
 
     if (pass) begin
       $display("*** TEST PASSED ***");
     end else begin
-      $display("*** TEST FAILED ***");
+      $error("*** TEST FAILED ***");
     end
 
     #20;
