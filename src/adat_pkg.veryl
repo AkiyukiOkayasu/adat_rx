@@ -32,6 +32,7 @@ pub package adat_pkg {
         Smux2,
         /// S/MUX4 176.4kHz / 192kHz - 2ch
         /// warning: 現時点の実装ではS/MUX4は未対応
+        /// S/MUX4はUserBitからは判定不能のため、エンドユーザーが明示的に設定するか、外部WordClock参照が必要
         Smux4,
     }
 }
