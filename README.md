@@ -1,6 +1,7 @@
-# VerylによるADAT受信
+# ADAT decoder
 
 ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号から作る。
+Verylによる実装。
 
 ## プロジェクト状況
 
@@ -17,15 +18,37 @@ ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号
 - S/MUX4対応
 - Wavedromの波形記述の修正
 - ドキュメントの改善
-- テストベンチ用の信号を最終的に削除するか検討。
+- テストベンチ用の信号を最終的に削除するか検討
+- SyncrhonizerとEdgeDetectorをverylのstdに置き換え
+
+## ADAT基本仕様
+
+48kHzか44.1kHzが基本サンプルレートであり、8ch伝送できる。
+1フレームは256bit。
+
+### エンコード
+
+4B5B→NRZI
+
+### S/MUX
+
+チャンネル数を減らす代わりに基本サンプルレートより高い周波数を使うことができる。
+
+- S/MUX2: 96kHz or 88.2kHz, 4ch
+- S/MUX4: 192kHz or 176.4kHz, 2ch
+
+### ADAT物理ビットレート
+
+- 48kHz系: 12.288Mbps
+- 44.1kHz系: 11.2896Mbps
+
+S/MUX2もしくはS/MUX4になっても物理ビットレートは変わらないことに注意。
+S/MUX2では1フレームあたり2サンプル分が格納される。
 
 ## クロック仕様
 
 - システムクロック: 50MHz推奨
-- ADATビットレート:
-  - 48kHz系: 12.288Mbps
-  - 44.1kHz系: 11.2896Mbps
-- 1ビットあたりのクロック:
+- 1bitあたりのクロック:
   - 48kHz時: 約4.07クロック (50MHz / 12.288MHz)
   - 44.1kHz時: 約4.43クロック (50MHz / 11.2896MHz)
 - 1フレーム: 256bit
@@ -62,7 +85,7 @@ just unit-tests-trace
 
 ## 波形デバッグ
 
-GTKWaveはmacOSで問題があるため、**Surfer**を使用します。
+波形Viewerは[Surfer](https://gitlab.com/surfer-project/surfer)を使用。
 
 ```sh
 # シミュレーション実行（FST出力付き）
@@ -79,7 +102,3 @@ surfer /Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fs
 cd sim/verilator
 just wave
 ```
-
-## 参考
-
-<https://ackspace.nl/wiki/ADAT_project>
