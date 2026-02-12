@@ -1,9 +1,4 @@
 {
-  "$schema": "https://opencode.ai/config.json",
-  "permission": {},
-  "watcher": {
-    "ignore": [
-      "Hardware/**"
-    ]
-  }
+	"$schema": "https://opencode.ai/config.json",
+	"permission": {}
 }

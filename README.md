@@ -15,10 +15,10 @@ Verylによる実装。
 
 ### TODO
 
-- S/MUX4対応
+- S/MUX4の自動判別が可能かどうかさらに検討→おそらく無理
 - Wavedromの波形記述の修正
 - ドキュメントの改善
-- テストベンチ用の信号を最終的に削除するか検討
+- テストベンチ用の内部プローブ信号の整理を検討
 - SyncrhonizerとEdgeDetectorをverylのstdに置き換え
 
 ## ADAT基本仕様
