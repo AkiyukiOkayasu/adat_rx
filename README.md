@@ -52,52 +52,14 @@ S/MUX2では1フレームあたり2サンプル分が格納される。
   - 44.1kHz時: 約4.43クロック (50MHz / 11.2896MHz)
 - 1フレーム: 256bit
 
-## シミュレーション
-
-トレース無し:
+## Test
 
 ```sh
-cd sim/verilator
-just run
+veryl test
 ```
 
-トレース付き:
+FSTファイル出力付き:
 
 ```sh
-cd sim/verilator
-just run-trace
-```
-
-## ユニットテスト
-
-```sh
-cd sim/verilator
-just unit-tests
-```
-
-トレース付き:
-
-```sh
-cd sim/verilator
-just unit-tests-trace
-```
-
-## 波形デバッグ
-
-波形Viewerは[Surfer](https://gitlab.com/surfer-project/surfer)を使用。
-
-```sh
-# シミュレーション実行（FST出力付き）
-cd sim/verilator
-just run-trace
-
-# Surferで波形表示
-surfer /Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fst
-```
-
-またはシミュレーション後に自動でSurferを起動:
-
-```sh
-cd sim/verilator
-just wave
+veryl test --wave
 ```
