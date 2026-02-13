@@ -509,8 +509,6 @@ module tb_adat_rx;
   int bit_count_hist[0:5];  // index 0 unused, 1-5 for bit counts
   int boundary_pass[0:7];  // boundary crossing counts for each channel
 
-  // S/MUX2 test variables
-  int smux2_errors;
 
   initial begin
     $display("Clock: 50MHz, Sample Rate: 48kHz");
@@ -795,41 +793,25 @@ module tb_adat_rx;
     // ロック確認
     #100;
     if (!locked) begin
-      $display("S/MUX2 FAIL (expected): Receiver not locked");
-    end else begin
-      $display("S/MUX2: Receiver locked");
+      $error("S/MUX2 FAIL: Receiver not locked");
     end
 
-    // S/MUX2期待値チェック (これらは現在のDUTでは失敗するはず)
-    smux2_errors = 0;
-    // サンプルレートチェック
-    $display("S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
-    $display("S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
+    // S/MUX2期待値チェック
     if (smux_mode != SmuxMode_Smux2) begin
-      $display("  FAIL (expected): S/MUX mode is not S/MUX2");
-      smux2_errors = smux2_errors + 1;
+      $error("S/MUX2 FAIL: S/MUX mode is not S/MUX2");
+    end
+    if (valid_channels !== 4) begin
+      $error("S/MUX2 FAIL: valid_channels should be 4, got %0d", valid_channels);
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
     @(posedge valid);
     #10;
-    $display("S/MUX2: Checking data integrity...");
     for (int i = 0; i < 8; i = i + 1) begin
       if (channels[i] !== test_audio_smux2[i]) begin
         $error("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2[i],
                channels[i]);
-        smux2_errors = smux2_errors + 1;
-      end else begin
-        $display("  Channel %0d: PASS - %h", i, channels[i]);
       end
-    end
-
-    $display("\n=== S/MUX2 Test Results ===");
-    $display("Errors: %0d", smux2_errors);
-    if (smux2_errors > 0) begin
-      $error("*** S/MUX2 TEST FAILED ***");
-    end else begin
-      $display("*** S/MUX2 TEST PASSED ***");
     end
 
     // ==================== 88.2kHz S/MUX2 TEST ====================
@@ -868,41 +850,25 @@ module tb_adat_rx;
     // ロック確認
     #100;
     if (!locked) begin
-      $display("88.2kHz S/MUX2 FAIL (expected): Receiver not locked");
-    end else begin
-      $display("88.2kHz S/MUX2: Receiver locked");
+      $error("88.2kHz S/MUX2 FAIL: Receiver not locked");
     end
 
-    // S/MUX2期待値チェック (これらは現在のDUTでは失敗するはず)
-    smux2_errors = 0;
-    // サンプルレートチェック
-    $display("88.2kHz S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
-    $display("88.2kHz S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
+    // S/MUX2期待値チェック
     if (smux_mode != SmuxMode_Smux2) begin
-      $display("  88.2kHz FAIL (expected): S/MUX mode is not S/MUX2");
-      smux2_errors = smux2_errors + 1;
+      $error("88.2kHz S/MUX2 FAIL: S/MUX mode is not S/MUX2");
+    end
+    if (valid_channels !== 4) begin
+      $error("88.2kHz S/MUX2 FAIL: valid_channels should be 4, got %0d", valid_channels);
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
     @(posedge valid);
     #10;
-    $display("88.2kHz S/MUX2: Checking data integrity...");
     for (int i = 0; i < 8; i = i + 1) begin
       if (channels[i] !== test_audio_smux2_88k[i]) begin
         $error("  88.2kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2_88k[i],
                channels[i]);
-        smux2_errors = smux2_errors + 1;
-      end else begin
-        $display("  88.2kHz Channel %0d: PASS - %h", i, channels[i]);
       end
-    end
-
-    $display("\n=== 88.2kHz S/MUX2 Test Results ===");
-    $display("Errors: %0d", smux2_errors);
-    if (smux2_errors > 0) begin
-      $error("*** 88.2kHz S/MUX2 TEST FAILED ***");
-    end else begin
-      $display("*** 88.2kHz S/MUX2 TEST PASSED ***");
     end
 
     #1000;
