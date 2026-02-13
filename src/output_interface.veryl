@@ -56,7 +56,6 @@ module output_interface (
     var output_phase: logic;
 
     // S/MUX2モード検出 (ADAT User Bit 2 → i_user_bits[1])
-    // TODO UserBit2が本当にi_user_bits[1]か確認
     assign smux2_mode = i_user_bits[1];
 
     // S/MUXモード出力（S/MUX2検出結果を反映）
