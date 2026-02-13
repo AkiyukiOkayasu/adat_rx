@@ -23,5 +23,4 @@ SystemVerilog testbenches for the ADAT receiver pipeline and integration flow.
 - Use strict comparisons (`!==`) for data validation.
 
 ## ANTI-PATTERNS (THIS DIRECTORY)
-- Do not change DUT internal instance names without updating hierarchical probes.
 - Avoid ad-hoc stimulus when `adat_generator.sv` can be reused.

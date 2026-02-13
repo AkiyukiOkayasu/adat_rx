@@ -26,7 +26,6 @@ Veryl RTL sources for the ADAT receiver pipeline and shared package definitions.
 
 ## ANTI-PATTERNS (THIS DIRECTORY)
 - Do not edit `target/*.sv` for RTL changes; regenerate via `veryl build`.
-- Avoid renaming internal instance names without updating testbench probes.
 
 ## UNIQUE STYLES
 - Module docs include detailed ADAT frame structure and timing WaveDroms.
