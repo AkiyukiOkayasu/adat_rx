@@ -13,11 +13,8 @@ Veryl RTL ADAT receiver. Decodes TOSLINK ADAT into 8-channel 24-bit PCM with sam
 ```
 adat_rx/
 ├── src/                  # Veryl RTL sources (top + submodules)
-├── tests/                # SystemVerilog testbenches + generator
-├── sim/verilator/        # Verilator harness + Justfile
 ├── target/               # Veryl-generated SystemVerilog output
 ├── dependencies/std/     # Vendored/generate stdlib SV
-├── docs/                 # Project notes (S/MUX status)
 └── doc/                  # Generated Veryl HTML docs
 ```
 
@@ -28,10 +25,6 @@ adat_rx/
 | Top module wiring | src/adat_rx.veryl | Instantiates all pipeline modules |
 | Shared types/constants | src/adat_pkg.veryl | SampleRate enum + frame timing constants |
 | Sample-rate + output | src/output_interface.veryl | Word clock, valid/locked, rate detection |
-| Integration tests | tests/tb_adat_rx.sv | Uses adat_generator + strict comparisons |
-| Unit tests | tests/tb_*.sv | One tb per module |
-| Simulation commands | sim/verilator/Justfile | Just targets for build/run/tests |
-| S/MUX status notes | docs/smux_status.md | Design notes + test strategy |
 | Stdlib SV | dependencies/std/** | Generated std modules (do not edit) |
 
 ## CONVENTIONS
@@ -45,14 +38,11 @@ adat_rx/
 
 - Do not edit generated outputs under `target/` or `doc/` by hand.
 - Do not edit vendored stdlib under `dependencies/std/` directly; regenerate upstream.
-- Do not rely on Verilator `obj_dir/` artifacts being committed.
 - Do not use GTKWave on macOS; use Surfer for FST traces.
 
 ## UNIQUE STYLES
 
-- Simulation is driven from `sim/verilator/Justfile` (not repo root).
 - Integration test uses FST traces (`adat_rx.fst`); unit tests emit VCD by default.
-- `Hardware/` is not useful for this project; avoid reading it to save context.
 
 ## COMMANDS
 
@@ -63,15 +53,11 @@ veryl build
 veryl clean
 
 # Simulation + tests
-cd sim/verilator
-just run
-just run-trace
-just wave
-just unit-tests
-just unit-tests-trace
+veryl test
+veryl test --wave
+surfer src/tb_adat_rx.fst
 ```
 
 ## NOTES
 
 - `Veryl.toml` pins sources to `src/` and outputs SV to `target/`.
-- `sim/verilator/Justfile` hard-codes an absolute path for `surfer`; adjust if needed.
