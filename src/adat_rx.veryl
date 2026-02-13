@@ -33,15 +33,15 @@ import adat_pkg::SmuxMode;
 ///
 /// | ビット | 内容 | 説明 |
 /// |--------|------|------|
-/// | 0-9 | 0000000000 | SYNC: 10ビットの0（NRZIで無遷移） |
-/// | 10-14 | 1 U3 U2 U1 U0 | User nibble: separator=1 + User bits[3:0] |
-/// | 15-19 | D0-D3 + 1 | CH0 nibble0: audio[3:0] + separator |
-/// | 20-24 | D4-D7 + 1 | CH0 nibble1: audio[7:4] + separator |
-/// | 25-29 | D8-D11 + 1 | CH0 nibble2: audio[11:8] + separator |
-/// | 30-34 | D12-D15 + 1 | CH0 nibble3: audio[15:12] + separator |
-/// | 35-39 | D16-D19 + 1 | CH0 nibble4: audio[19:16] + separator |
-/// | 40-44 | D20-D23 + 1 | CH0 nibble5: audio[23:20] + separator |
-/// | 45-74 | ... | CH1 (上記と同じ6 nibbles) |
+/// | 0-10 | 0000000000 + 1 | SYNC: 10ビットの0（NRZIで無遷移） + separator=1|
+/// | 11-15 | U3 U2 U1 U0 + 1 | User nibble: User bits[3:0] + separator|
+/// | 16-20 | D0-D3 + 1 | CH0 nibble0: audio[3:0] + separator |
+/// | 21-25 | D4-D7 + 1 | CH0 nibble1: audio[7:4] + separator |
+/// | 26-30 | D8-D11 + 1 | CH0 nibble2: audio[11:8] + separator |
+/// | 31-35 | D12-D15 + 1 | CH0 nibble3: audio[15:12] + separator |
+/// | 36-40 | D16-D19 + 1 | CH0 nibble4: audio[19:16] + separator |
+/// | 41-45 | D20-D23 + 1 | CH0 nibble5: audio[23:20] + separator |
+/// | 46-75 | ... | CH1 (上記と同じ6 nibbles) |
 /// | ... | ... | CH2-CH7 (各30ビット) |
 ///
 /// ## セパレーターの役割
