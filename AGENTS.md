@@ -24,7 +24,7 @@ adat_rx/
 | --- | --- | --- |
 | Top module wiring | src/adat_rx.veryl | Instantiates all pipeline modules |
 | Shared types/constants | src/adat_pkg.veryl | SampleRate enum + frame timing constants |
-| Sample-rate + output | src/output_interface.veryl | Word clock, valid/locked, rate detection |
+| S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX detection |
 | Stdlib SV | dependencies/std/** | Generated std modules (do not edit) |
 
 ## CONVENTIONS
