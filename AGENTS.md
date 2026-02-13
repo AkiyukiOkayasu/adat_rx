@@ -24,7 +24,7 @@ adat_rx/
 | --- | --- | --- |
 | Top module wiring | src/adat_rx.veryl | Instantiates all pipeline modules |
 | Shared types/constants | src/adat_pkg.veryl | SampleRate enum + frame timing constants |
-| S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX detection |
+| S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX active detection (UserBit only). Distinguishing S/MUX2 vs S/MUX4 from UserBit is impossible |
 | Stdlib SV | dependencies/std/** | Generated std modules (do not edit) |
 
 ## CONVENTIONS
