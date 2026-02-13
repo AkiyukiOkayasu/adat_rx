@@ -1,5 +1,7 @@
 # ADAT decoder
 
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-2ea44f?logo=github)](https://akiyukiokayasu.github.io/adat_rx/)
+
 ADAT信号を受信し、PCM信号を出力するRTL。クロックはADAT信号から作る。
 Verylによる実装。
 
