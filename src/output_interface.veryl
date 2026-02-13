@@ -54,9 +54,9 @@ module output_interface (
     assign smux_active = i_user_bits[1];
 
     assign o_smux_active = smux_active;
-    assign o_frame_clk = word_clk;
-    assign o_valid     = valid_out;
-    assign o_locked    = locked;
+    assign o_frame_clk   = word_clk;
+    assign o_valid       = valid_out;
+    assign o_locked      = locked;
 
     // チャンネル出力割り当て
     for i in 0..8 :g_ch_out {

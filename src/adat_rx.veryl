@@ -184,6 +184,8 @@ pub module adat_rx (
     /// warning: S/MUX有効時でも44.1kHz/48kHzが出力されることに注意
     o_frame_clk: output logic,
     /// 検出されたS/MUX有効状態 (1: enabled, 0: disabled)
+    /// UserBit2による自動判定
+    /// warning: UserBitによるS/MUX2とS/MUX4の区別は原理的に不可能なので、あくまでS/MUXが有効or無効のみを示す
     o_smux_active: output logic,
     /// 8チャンネルPCMデータ出力
     o_channels: output logic<24> [8],
@@ -276,19 +278,19 @@ pub module adat_rx (
 
     // 出力インターフェースモジュール
     inst u_output_interface: output_interface (
-        i_clk       : i_clk      ,
-        i_rst       : i_rst      ,
-        i_frame_time: frame_time ,
-        i_data      : pcm_data   ,
-        i_channel   : channel    ,
-        i_data_valid: data_valid ,
-        i_sync      : sync_detect,
-        i_user_bits : user_bits  ,
-        o_smux_active : o_smux_active,
-        o_frame_clk : o_frame_clk,
-        o_channels  : o_channels ,
-        o_valid     : o_valid    ,
-        o_locked    : o_locked   ,
+        i_clk        : i_clk        ,
+        i_rst        : i_rst        ,
+        i_frame_time : frame_time   ,
+        i_data       : pcm_data     ,
+        i_channel    : channel      ,
+        i_data_valid : data_valid   ,
+        i_sync       : sync_detect  ,
+        i_user_bits  : user_bits    ,
+        o_smux_active: o_smux_active,
+        o_frame_clk  : o_frame_clk  ,
+        o_channels   : o_channels   ,
+        o_valid      : o_valid      ,
+        o_locked     : o_locked     ,
     );
 }
 
