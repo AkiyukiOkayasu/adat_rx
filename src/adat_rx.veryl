@@ -981,11 +981,5 @@ module tb_adat_rx;
     $finish;
   end
 
-  // 波形ダンプ
-  initial begin
-    $dumpfile("adat_rx.fst");
-    $dumpvars(0, tb_adat_rx);
-  end
-
 endmodule
 }}}
