@@ -70,8 +70,6 @@ pub module adat_rx (
     i_rst: input reset,
     /// ADAT入力 (光→電気変換済み)
     i_adat: input logic,
-    /// ユーザーデータ出力 (4bit)
-    o_user: output logic<4>,
     /// ワードクロック出力
     o_word_clk: output logic,
     /// 検出されたS/MUXモード
@@ -96,7 +94,6 @@ pub module adat_rx (
     var bits      : logic<5> ;
     var bit_count : logic<3> ;
     var bits_valid: logic    ;
-    var user_bits : logic<4> ;
     var pcm_data  : logic<24>;
     var channel   : logic<3> ;
     var data_valid: logic    ;
@@ -153,6 +150,9 @@ pub module adat_rx (
         o_valid     : bits_valid ,
     );
 
+    // UserBits出力信号
+    var user_bits: logic<4>;
+
     // フレームパーサモジュール
     inst u_frame_parser: frame_parser (
         i_clk       : i_clk      ,
@@ -184,8 +184,6 @@ pub module adat_rx (
         o_locked        : o_locked        ,
         o_valid_channels: o_valid_channels,
     );
-
-    assign o_user = user_bits;
 }
 
 #[test(tb_adat_rx)]
@@ -346,7 +344,6 @@ module tb_adat_rx;
 
   // DUT信号
   logic           adat_in;
-  logic    [ 3:0] user_out;
   logic           word_clk;
   SmuxMode        smux_mode;
   logic    [23:0] channels  [0:7];
@@ -467,7 +464,6 @@ module tb_adat_rx;
       .i_clk(clk),
       .i_rst(rst),
       .i_adat(adat_in_muxed),
-      .o_user(user_out),
       .o_word_clk(word_clk),
       .o_smux_mode(smux_mode),
       .o_channels(channels),
@@ -650,14 +646,6 @@ module tb_adat_rx;
         end
       end
 
-      if (user_out !== test_user) begin
-        $error("  User data: FAIL - Expected: %h, Got: %h", test_user, user_out);
-        error_count++;
-        test_pass = 0;
-      end else begin
-        $display("  User data: PASS - %h", user_out);
-      end
-
       #100;
     end
 
@@ -761,14 +749,6 @@ module tb_adat_rx;
         end
       end
 
-      if (user_out !== test_user_44k) begin
-        $error("  44.1kHz User data: FAIL - Expected: %h, Got: %h", test_user_44k, user_out);
-        error_count++;
-        test_pass = 0;
-      end else begin
-        $display("  44.1kHz User data: PASS - %h", user_out);
-      end
-
       #100;
     end
 
@@ -848,7 +828,6 @@ module tb_adat_rx;
     end
 
     // サンプルレートチェック
-    $display("S/MUX2: user_out (user_bits): %b", user_out);
     $display("S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
     $display("S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
     if (smux_mode != SmuxMode_Smux2) begin
@@ -946,7 +925,6 @@ module tb_adat_rx;
     end
 
     // サンプルレートチェック
-    $display("88.2kHz S/MUX2: user_out (user_bits): %b", user_out);
     $display("88.2kHz S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
     $display("88.2kHz S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
     if (smux_mode != SmuxMode_Smux2) begin
