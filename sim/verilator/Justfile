@@ -14,7 +14,7 @@ VERILATOR := "verilator"
 VERILATOR_FLAGS := "--cc --exe --build -j 0 -Wall -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-TIMESCALEMOD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC -Wno-PINCONNECTEMPTY --timing"
 VERILATOR_TRACE_FLAGS := "--cc --exe --build -j 0 -Wall -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-TIMESCALEMOD -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC -Wno-PINCONNECTEMPTY --timing --trace-fst"
 
-default: run
+default: test
 
 # Verylフォーマット
 fmt:
@@ -24,24 +24,37 @@ fmt:
 veryl: fmt
   cd {{PROJ_ROOT}} && veryl build
 
-# Verilatorビルド（トレースなし）
+# Run Veryl integrated tests (primary route)
+test:
+  cd {{PROJ_ROOT}} && veryl test src/*.veryl
+
+# Run Veryl integrated tests with waveform output (primary route)
+test-wave:
+  cd {{PROJ_ROOT}} && veryl test src/*.veryl --wave
+
+# Legacy: Run all tests via veryl test (DEPRECATED - use 'just test' instead)
+run: test
+
+# Legacy: Verilatorビルド（トレースなし）
 build: veryl
   {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
 
-# Verilatorビルド（トレース付き）
+# Legacy: Verilatorビルド（トレース付き）
 build-trace: veryl
   {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
 
-# 実行（トレースなし）
-run: build
+# Legacy: 実行（トレースなし）
+# Direct Verilator execution (DEPRECATED - use 'just test' instead)
+@_run-verilator: build
   ./{{OBJ_DIR}}/Vtb_adat_rx
 
-# 実行（FSTトレース出力付き）
-run-trace: build-trace
+# Legacy: 実行（FSTトレース出力付き）
+# Direct Verilator execution with tracing (DEPRECATED - use 'just test-wave' instead)
+@_run-verilator-trace: build-trace
   ./{{OBJ_DIR}}/Vtb_adat_rx
 
-# 波形表示 (Surfer)
-wave: run-trace
+# 波形表示 (Surfer) - Legacy Verilator flow (DEPRECATED - use 'just test-wave' instead)
+wave: _run-verilator-trace
   surfer "/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fst"
 
 # クリーンアップ
@@ -54,68 +67,11 @@ clean:
 help:
   @just --list
 
-# ユニットテスト一括（トレースなし）
-unit-tests: veryl
-  #!/usr/bin/env bash
-  set -euo pipefail
-  for mod in timing_tracker bit_decoder frame_parser output_interface; do
-    case "$mod" in
-      timing_tracker)
-        top=tb_timing_tracker
-        tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
-        rtl="{{PROJ_ROOT}}/target/timing_tracker.sv"
-        main=sim_main_timing.cpp
-        ;;
-      bit_decoder)
-        top=tb_bit_decoder
-        tb="{{PROJ_ROOT}}/tests/tb_bit_decoder.sv"
-        rtl="{{PROJ_ROOT}}/target/bit_decoder.sv"
-        main=sim_main_bit.cpp
-        ;;
-      frame_parser)
-        top=tb_frame_parser
-        tb="{{PROJ_ROOT}}/tests/tb_frame_parser.sv"
-        rtl="{{PROJ_ROOT}}/target/frame_parser.sv"
-        main=sim_main_frame.cpp
-        ;;
-      output_interface)
-        top=tb_output_interface
-        tb="{{PROJ_ROOT}}/tests/tb_output_interface.sv"
-        rtl="{{PROJ_ROOT}}/target/output_interface.sv"
-        main=sim_main_output.cpp
-        ;;
-    esac
-    {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module "$top" -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f "$tb" "$main"
-    ./{{OBJ_DIR}}/V"$top"
-  done
+# Legacy: ユニットテスト一括（トレースなし）
+# DEPRECATED - use 'just test' instead
+unit-tests: test
 
-# ユニットテスト一括（トレースあり: FST）
-unit-tests-trace: veryl
-  #!/usr/bin/env bash
-  set -euo pipefail
-  for mod in timing_tracker bit_decoder frame_parser output_interface; do
-    case "$mod" in
-      timing_tracker)
-        top=tb_timing_tracker
-        tb="{{PROJ_ROOT}}/tests/tb_timing_tracker.sv"
-        main=sim_main_timing.cpp
-        ;;
-      bit_decoder)
-        top=tb_bit_decoder
-        tb="{{PROJ_ROOT}}/tests/tb_bit_decoder.sv"
-        main=sim_main_bit.cpp
-        ;;
-      frame_parser)
-        top=tb_frame_parser
-        tb="{{PROJ_ROOT}}/tests/tb_frame_parser.sv"
-        main=sim_main_frame.cpp
-        ;;
-      output_interface)
-        top=tb_output_interface
-        tb="{{PROJ_ROOT}}/tests/tb_output_interface.sv"
-        main=sim_main_output.cpp
-        ;;
-    esac
-    {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module "$top" -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f "$tb" "$main"
-    ./{{OBJ_DIR}}/V"$top"
-  done
+# Legacy: ユニットテスト一括（トレースあり: FST）
+# DEPRECATED - use 'just test-wave' instead
+unit-tests-trace: test-wave
+

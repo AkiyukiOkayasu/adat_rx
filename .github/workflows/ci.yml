@@ -16,11 +16,5 @@ jobs:
             - uses: extractions/setup-just@v3
             - uses: veryl-lang/setup-veryl@v1
             - uses: veryl-lang/setup-verilator@v1
-            - name: Unit tests
-              run: |
-                  cd sim/verilator
-                  just unit-tests
             - name: Tests
-              run: |
-                  cd sim/verilator
-                  just run
+              run: veryl test src/*.veryl
