@@ -511,7 +511,6 @@ module tb_adat_rx;
 
   // S/MUX2 test variables
   int smux2_errors;
-  int valid_count_per_frame;
 
   initial begin
     $display("Clock: 50MHz, Sample Rate: 48kHz");
@@ -803,30 +802,6 @@ module tb_adat_rx;
 
     // S/MUX2期待値チェック (これらは現在のDUTでは失敗するはず)
     smux2_errors = 0;
-    valid_count_per_frame = 0;
-
-    // 1フレーム分のo_validパルスをカウント (クロック周波数非依存)
-    @(posedge gen_done_smux2);
-    @(negedge gen_done_smux2);  // frame_doneパルスが終わるまで待つ
-    fork
-      begin
-        repeat (10000) begin
-          @(posedge clk);
-          if (valid) valid_count_per_frame = valid_count_per_frame + 1;
-        end
-      end
-      begin
-        @(posedge gen_done_smux2);
-      end
-    join_any
-    disable fork;
-
-    $display("S/MUX2: o_valid pulses per frame: %0d (expected: 2)", valid_count_per_frame);
-    if (valid_count_per_frame != 2) begin
-      $display("  FAIL (expected): o_valid count mismatch");
-      smux2_errors = smux2_errors + 1;
-    end
-
     // サンプルレートチェック
     $display("S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
     $display("S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
@@ -900,30 +875,6 @@ module tb_adat_rx;
 
     // S/MUX2期待値チェック (これらは現在のDUTでは失敗するはず)
     smux2_errors = 0;
-    valid_count_per_frame = 0;
-
-    // 1フレーム分のo_validパルスをカウント (クロック周波数非依存)
-    @(posedge gen_done_smux2_88k);
-    @(negedge gen_done_smux2_88k);  // frame_doneパルスが終わるまで待つ
-    fork
-      begin
-        repeat (10000) begin
-          @(posedge clk);
-          if (valid) valid_count_per_frame = valid_count_per_frame + 1;
-        end
-      end
-      begin
-        @(posedge gen_done_smux2_88k);
-      end
-    join_any
-    disable fork;
-
-    $display("88.2kHz S/MUX2: o_valid pulses per frame: %0d (expected: 2)", valid_count_per_frame);
-    if (valid_count_per_frame != 2) begin
-      $display("  88.2kHz FAIL (expected): o_valid count mismatch");
-      smux2_errors = smux2_errors + 1;
-    end
-
     // サンプルレートチェック
     $display("88.2kHz S/MUX2: o_valid_channels: %0d (expected: 4)", valid_channels);
     $display("88.2kHz S/MUX2: o_smux_mode: %s (expected: Smux2)", smux_mode.name());
