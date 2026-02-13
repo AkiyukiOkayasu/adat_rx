@@ -2,9 +2,11 @@ import adat_pkg::*;
 
 /// 出力インターフェース
 ///
-/// S/MUX対応、サンプルレート自動検出、ワードクロック生成を行う。
+/// S/MUX対応、サンプルレート自動検出、フレームクロック生成を行う。
 ///
-/// # ワードクロック
+/// # フレームクロック
+/// ADATフレーム周期のクロック（サンプルクロックではない）
+/// 通常は44.1/48kHz、S/MUX2時のサンプルレートはこの2倍
 /// フレーム周期の約50%デューティで出力
 module output_interface (
     /// システムクロック
@@ -25,8 +27,8 @@ module output_interface (
     i_user_bits: input logic<4>,
     /// 検出されたS/MUXモード
     o_smux_mode: output SmuxMode,
-    /// ワードクロック出力
-    o_word_clk: output logic,
+    /// ADATフレーム周期のクロック出力（サンプルクロックではない）
+    o_frame_clk: output logic,
     /// 8チャンネルPCMデータ出力
     o_channels: output logic<24> [8],
     /// 全チャンネルデータ有効
@@ -65,10 +67,10 @@ module output_interface (
         }
     }
 
-    assign o_smux_mode = smux_mode;
-    assign o_word_clk  = word_clk;
-    assign o_valid     = valid_out;
-    assign o_locked    = locked;
+    assign o_smux_mode  = smux_mode;
+    assign o_frame_clk  = word_clk;
+    assign o_valid      = valid_out;
+    assign o_locked     = locked;
 
     always_comb {
         if smux2_mode {
@@ -164,7 +166,7 @@ module tb_output_interface;
   logic sync;
   logic [3:0] user_bits;
   SmuxMode smux_mode;
-  logic word_clk;
+  logic frame_clk;
   logic [23:0] channels[0:7];
   logic valid;
   logic locked;
@@ -185,7 +187,7 @@ module tb_output_interface;
       .i_sync(sync),
       .i_user_bits(user_bits),
       .o_smux_mode(smux_mode),
-      .o_word_clk(word_clk),
+      .o_frame_clk(frame_clk),
       .o_channels(channels),
       .o_valid(valid),
       .o_locked(locked),
