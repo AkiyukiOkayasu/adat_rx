@@ -500,14 +500,67 @@ module tb_adat_rx;
   /* verilator lint_on BLKSEQ */
 
   int frame_count;
-  int error_count;
-  int test_pass;
-  logic got_valid;
 
   // Metrics counters
   int bits_valid_count;
   int bit_count_hist[0:5];  // index 0 unused, 1-5 for bit counts
   int boundary_pass[0:7];  // boundary crossing counts for each channel
+
+  task automatic reset_dut();
+    begin
+      rst = 0;
+      #100;
+      rst = 1;
+      #100;
+    end
+  endtask
+
+  task automatic send_frames(input int frames, ref logic done_sig, input string label);
+    begin
+      for (int f = 0; f < frames; f++) begin
+        @(posedge done_sig);
+        #10;
+        if (label != "") begin
+          $display("%s Frame %0d completed", label, f + 1);
+        end else begin
+          $display("Frame %0d completed", f + 1);
+        end
+      end
+    end
+  endtask
+
+  task automatic wait_for_valid(input string tag);
+    logic got_valid_local;
+    begin
+      got_valid_local = 1'b0;
+      fork
+        begin
+          @(posedge valid);
+          got_valid_local = 1'b1;
+        end
+        begin
+          #200_000;
+        end
+      join_any
+      disable fork;
+
+      if (!got_valid_local) begin
+        $error("%sFAIL: Timeout waiting for valid", tag);
+        $finish;
+      end
+      #10;
+    end
+  endtask
+
+  task automatic compare_channels(input string tag, input logic [23:0] expected[0:7]);
+    begin
+      for (int i = 0; i < 8; i++) begin
+        if (channels[i] !== expected[i]) begin
+          $error("%sChannel %0d: FAIL - Expected: %h, Got: %h", tag, i, expected[i], channels[i]);
+        end
+      end
+    end
+  endtask
 
 
   initial begin
@@ -518,8 +571,6 @@ module tb_adat_rx;
     rst = 0;
     gen_start = 0;
     frame_count = 0;
-    error_count = 0;
-    test_pass = 1;
 
     // Metrics initialization
     bits_valid_count = 0;
@@ -538,9 +589,7 @@ module tb_adat_rx;
     test_audio[7] = 24'hABCDEF;
 
     // リセット解除 (アクティブローなので1にする)
-    #100;
-    rst = 1;
-    #100;
+    reset_dut();
 
     // 連続フレーム送信を開始（startを保持すると連続生成される）
     gen_start = 1;
@@ -566,12 +615,8 @@ module tb_adat_rx;
     join_none
 
     // フレーム完了を待つ（メインスレッドで実行）
-    repeat (10) begin
-      @(posedge gen_done);
-      #10;
-      frame_count++;
-      $display("Frame %0d completed", frame_count);
-    end
+    send_frames(10, gen_done, "");
+    frame_count = 10;
 
     // エッジモニタを停止
     disable fork;
@@ -602,7 +647,6 @@ module tb_adat_rx;
 
     if (!locked) begin
       $error("FAIL: Receiver not locked");
-      test_pass = 0;
       $finish;
     end else begin
       $display("PASS: Receiver locked");
@@ -611,50 +655,15 @@ module tb_adat_rx;
     $display("\nStarting strict data comparison...");
 
     repeat (5) begin
-      got_valid = 1'b0;
-      fork
-        begin
-          @(posedge valid);
-          got_valid = 1'b1;
-        end
-        begin
-          #200_000;
-        end
-      join_any
-      disable fork;
-
-      if (!got_valid) begin
-        $error("FAIL: Timeout waiting for valid");
-        error_count++;
-        test_pass = 0;
-        $finish;
-      end
-
-      #10;
-
-      $display("\nFrame received, comparing all channels:");
-      for (int i = 0; i < 8; i++) begin
-        if (channels[i] !== test_audio[i]) begin
-          $error("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio[i], channels[i]);
-          error_count++;
-          test_pass = 0;
-        end else begin
-          $display("  Channel %0d: PASS - %h", i, channels[i]);
-        end
-      end
+      wait_for_valid("");
+      compare_channels("", test_audio);
 
       #100;
     end
 
     $display("\n=== Test Results ===");
     $display("Frames sent: %0d", frame_count);
-    $display("Errors: %0d", error_count);
-
-    if (test_pass && error_count == 0) begin
-      $display("*** TEST PASSED ***");
-    end else begin
-      $error("*** TEST FAILED ***");
-    end
+    $display("*** TEST SECTION DONE ***");
 
     // ==================== 44.1kHz TEST ====================
     $display("\n=== 44.1kHz Test ===");
@@ -677,22 +686,14 @@ module tb_adat_rx;
     gen_start_44k = 0;
     gen_start_smux2 = 0;
     frame_count = 0;
-    error_count = 0;
-    test_pass = 1;
-    #100;
-    rst = 1;
-    #100;
+    reset_dut();
 
     // 44.1kHzフレーム送信開始
     gen_start_44k = 1;
 
     // フレーム送信
-    repeat (10) begin
-      @(posedge gen_done_44k);
-      #10;
-      frame_count++;
-      $display("44.1kHz Frame %0d completed", frame_count);
-    end
+    send_frames(10, gen_done_44k, "44.1kHz");
+    frame_count = 10;
 
     // ロック確認
     #100;
@@ -704,7 +705,6 @@ module tb_adat_rx;
 
     if (!locked) begin
       $error("44.1kHz FAIL: Receiver not locked");
-      test_pass = 0;
       $finish;
     end else begin
       $display("44.1kHz PASS: Receiver locked");
@@ -713,51 +713,15 @@ module tb_adat_rx;
     $display("\n44.1kHz: Starting strict data comparison...");
 
     repeat (5) begin
-      got_valid = 1'b0;
-      fork
-        begin
-          @(posedge valid);
-          got_valid = 1'b1;
-        end
-        begin
-          #200_000;
-        end
-      join_any
-      disable fork;
-
-      if (!got_valid) begin
-        $error("44.1kHz FAIL: Timeout waiting for valid");
-        error_count++;
-        test_pass = 0;
-        $finish;
-      end
-
-      #10;
-
-      $display("\n44.1kHz Frame received, comparing all channels:");
-      for (int i = 0; i < 8; i++) begin
-        if (channels[i] !== test_audio_44k[i]) begin
-          $error("  44.1kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_44k[i],
-                 channels[i]);
-          error_count++;
-          test_pass = 0;
-        end else begin
-          $display("  44.1kHz Channel %0d: PASS - %h", i, channels[i]);
-        end
-      end
+      wait_for_valid("44.1kHz ");
+      compare_channels("44.1kHz ", test_audio_44k);
 
       #100;
     end
 
     $display("\n=== 44.1kHz Test Results ===");
     $display("Frames sent: %0d", frame_count);
-    $display("Errors: %0d", error_count);
-
-    if (test_pass && error_count == 0) begin
-      $display("*** 44.1kHz TEST PASSED ***");
-    end else begin
-      $error("*** 44.1kHz TEST FAILED ***");
-    end
+    $display("*** 44.1kHz TEST SECTION DONE ***");
 
     // ==================== S/MUX2 TEST ====================
     $display("\n=== S/MUX2 Test (96kHz 4ch mode) ===");
@@ -777,18 +741,13 @@ module tb_adat_rx;
     rst = 0;
     gen_start = 0;
     gen_start_smux2 = 0;
-    #100;
-    rst = 1;
-    #100;
+    reset_dut();
 
     // S/MUX2フレーム送信開始
     gen_start_smux2 = 1;
 
     // 10フレーム送信
-    repeat (10) begin
-      @(posedge gen_done_smux2);
-      #10;
-    end
+    send_frames(10, gen_done_smux2, "");
 
     // ロック確認
     #100;
@@ -805,14 +764,8 @@ module tb_adat_rx;
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
-    @(posedge valid);
-    #10;
-    for (int i = 0; i < 8; i = i + 1) begin
-      if (channels[i] !== test_audio_smux2[i]) begin
-        $error("  Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2[i],
-               channels[i]);
-      end
-    end
+    wait_for_valid("");
+    compare_channels("  ", test_audio_smux2);
 
     // ==================== 88.2kHz S/MUX2 TEST ====================
     $display("\n=== 88.2kHz S/MUX2 Test (88.2kHz 4ch mode) ===");
@@ -834,18 +787,13 @@ module tb_adat_rx;
     gen_start_44k = 0;
     gen_start_smux2 = 0;
     gen_start_smux2_88k = 0;
-    #100;
-    rst = 1;
-    #100;
+    reset_dut();
 
     // 88.2kHz S/MUX2フレーム送信開始
     gen_start_smux2_88k = 1;
 
     // 10フレーム送信
-    repeat (10) begin
-      @(posedge gen_done_smux2_88k);
-      #10;
-    end
+    send_frames(10, gen_done_smux2_88k, "");
 
     // ロック確認
     #100;
@@ -862,14 +810,8 @@ module tb_adat_rx;
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
-    @(posedge valid);
-    #10;
-    for (int i = 0; i < 8; i = i + 1) begin
-      if (channels[i] !== test_audio_smux2_88k[i]) begin
-        $error("  88.2kHz Channel %0d: FAIL - Expected: %h, Got: %h", i, test_audio_smux2_88k[i],
-               channels[i]);
-      end
-    end
+    wait_for_valid("88.2kHz ");
+    compare_channels("  88.2kHz ", test_audio_smux2_88k);
 
     #1000;
     $finish;
