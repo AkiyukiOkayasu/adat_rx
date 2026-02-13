@@ -296,10 +296,5 @@ module tb_output_interface;
     #20;
     $finish;
   end
-
-  initial begin
-    $dumpfile("tb_output_interface.vcd");
-    $dumpvars(0, tb_output_interface);
-  end
 endmodule
 }}}
