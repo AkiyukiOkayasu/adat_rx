@@ -87,7 +87,6 @@ pub module adat_rx (
     var adat_edge  : logic    ;
     var synced     : logic    ;
     var edge_time  : logic<12>;
-    var max_time   : logic<10>;
     var sync_detect: logic    ;
     var frame_time : logic<12>;
 
@@ -123,7 +122,6 @@ pub module adat_rx (
         i_rst        : i_rst      ,
         i_edge       : adat_edge  ,
         o_edge_time  : edge_time  ,
-        o_max_time   : max_time   ,
         o_sync_detect: sync_detect,
         o_frame_time : frame_time ,
     );
@@ -448,7 +446,6 @@ module tb_adat_rx;
   logic        dbg_adat_edge;
   logic        dbg_adat_synced;
   logic [11:0] dbg_frame_time;
-  logic [ 9:0] dbg_max_time;
   logic        dbg_sync_detect;
   logic [ 4:0] dbg_bits;
   logic [ 2:0] dbg_bit_count;
@@ -475,7 +472,6 @@ module tb_adat_rx;
   assign dbg_adat_edge = u_dut.adat_edge;
   assign dbg_adat_synced = u_dut.synced;
   assign dbg_frame_time = u_dut.frame_time;
-  assign dbg_max_time = u_dut.max_time;
   assign dbg_sync_detect = u_dut.sync_detect;
   assign dbg_bits = u_dut.bits;
   assign dbg_bit_count = u_dut.bit_count;
@@ -637,7 +633,6 @@ module tb_adat_rx;
     $display("adat_in: %b", adat_in);
     $display("ADAT edge: %b, Synced: %b", dbg_adat_edge, dbg_adat_synced);
     $display("Frame time: %0d (expected ~2083)", dbg_frame_time);
-    $display("Max time: %0d", dbg_max_time);
     $display("Sync detect: %b", dbg_sync_detect);
     $display("Bits valid: %b, Bit count: %0d, Bits: %b", dbg_bits_valid, dbg_bit_count, dbg_bits);
     $display("Bit counter: %0d, Shift reg: %h", dbg_bit_counter, dbg_shift_reg);
@@ -700,7 +695,6 @@ module tb_adat_rx;
 
     $display("\n=== 44.1kHz Debug Info ===");
     $display("Frame time: %0d (expected ~2268 for 44.1kHz)", dbg_frame_time);
-    $display("Max time: %0d", dbg_max_time);
     $display("Locked: %b", locked);
 
     if (!locked) begin

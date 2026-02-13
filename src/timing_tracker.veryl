@@ -21,8 +21,6 @@ module timing_tracker (
     i_edge: input logic,
     /// 現在のエッジ間隔時間
     o_edge_time: output logic<12>,
-    /// 最大時間 (同期検出用)
-    o_max_time: output logic<10>,
     /// 同期検出フラグ (アクティブハイ=データ期間、ロー=同期期間)
     o_sync_detect: output logic,
     /// フレーム時間
@@ -51,7 +49,6 @@ module timing_tracker (
 
     assign threshold     = (max_time >> 1) + (max_time >> 2); // 3/4 = 1/2 + 1/4
     assign o_edge_time   = edge_time;
-    assign o_max_time    = max_time;
     assign o_sync_detect = sync_mask;
     assign o_frame_time  = frame_time;
 
@@ -125,7 +122,6 @@ embed (inline) sv{{{
         logic rst;
         logic edge_pulse;
         logic [11:0] edge_time;
-        logic [9:0] max_time;
         logic sync_detect;
         logic [11:0] frame_time;
 
@@ -139,7 +135,6 @@ embed (inline) sv{{{
             .i_rst(rst),
             .i_edge(edge_pulse),
             .o_edge_time(edge_time),
-            .o_max_time(max_time),
             .o_sync_detect(sync_detect),
             .o_frame_time(frame_time)
         );
@@ -163,11 +158,6 @@ embed (inline) sv{{{
             repeat (2) @(posedge clk);
             rst = 1'b1;
             repeat (2) @(posedge clk);
-
-            if (max_time !== 10'd10) begin
-                $error("FAIL: max_time init %0d", max_time);
-                pass = 0;
-            end
 
             pulse_edge(4);
             if (sync_detect !== 1'b1) begin
