@@ -21,8 +21,7 @@ Verylによる実装。
 ### フレーム仕様
 
 1フレームは256bitで構成される。
-<img width="10420" height="126" alt="wavedrom(2)" src="https://github.com/user-attachments/assets/5244e7e5-140d-446a-850c-879a64533172" />
-
+[ADATフレーム構造の詳細](https://akiyukiokayasu.github.io/adat_rx/adat_rx.html#%E3%82%B7%E3%83%AA%E3%82%A2%E3%83%AB%E4%BC%9D%E9%80%81%E9%A0%86%E3%81%A8%E3%83%93%E3%83%83%E3%83%88%E6%9C%89%E6%84%8F%E6%80%A7%E3%81%AE%E5%AE%9A%E7%BE%A9)
 
 ### エンコード
 
