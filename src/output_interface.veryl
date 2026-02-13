@@ -1,12 +1,10 @@
-import adat_pkg::*;
-
 /// 出力インターフェース
 ///
 /// S/MUX対応、サンプルレート自動検出、フレームクロック生成を行う。
 ///
 /// # フレームクロック
 /// ADATフレーム周期のクロック（サンプルクロックではない）
-/// 通常は44.1/48kHz、S/MUX2時のサンプルレートはこの2倍
+/// 通常は44.1/48kHz、S/MUX有効時のサンプルレートはこの2倍または4倍
 /// フレーム周期の約50%デューティで出力
 module output_interface (
     /// システムクロック
@@ -25,8 +23,8 @@ module output_interface (
     i_sync: input logic,
     /// ユーザービット入力
     i_user_bits: input logic<4>,
-    /// 検出されたS/MUXモード
-    o_smux_mode: output SmuxMode,
+    /// 検出されたS/MUX有効状態 (1: enabled, 0: disabled)
+    o_smux_active: output logic,
     /// ADATフレーム周期のクロック出力（サンプルクロックではない）
     o_frame_clk: output logic,
     /// 8チャンネルPCMデータ出力
@@ -36,8 +34,6 @@ module output_interface (
     /// 同期ロック状態
     o_locked: output logic,
 ) {
-    // S/MUXモードレジスタ
-    var smux_mode: SmuxMode;
     // ワードクロックカウンタ
     var word_clk_cnt: logic<12>;
     // ワードクロック出力
@@ -50,22 +46,14 @@ module output_interface (
     var locked: logic;
     // フレームカウンタ（ロック検出用）
     var frame_cnt: logic<4>;
-    // S/MUX2モード検出
-    var smux2_mode: logic;
+    // UserBit由来のS/MUX有効フラグ
+    var smux_active: logic;
 
-    // S/MUX2モード検出 (ADAT User Bit 2 → i_user_bits[1])
-    assign smux2_mode = i_user_bits[1];
+    // S/MUX有効判定 (ADAT User Bit 2 → i_user_bits[1])
+    // Note: ここからS/MUX2とS/MUX4の区別はできない
+    assign smux_active = i_user_bits[1];
 
-    // S/MUXモード出力（S/MUX2検出結果を反映）
-    always_comb {
-        if smux2_mode {
-            smux_mode = SmuxMode::Smux2;
-        } else {
-            smux_mode = SmuxMode::Standard;
-        }
-    }
-
-    assign o_smux_mode = smux_mode;
+    assign o_smux_active = smux_active;
     assign o_frame_clk = word_clk;
     assign o_valid     = valid_out;
     assign o_locked    = locked;
@@ -143,10 +131,6 @@ embed (inline) sv{{{
 `timescale 1ns / 1ps
 
 module tb_output_interface;
-  import adat_rx_adat_pkg::*;
-
-  typedef adat_rx_adat_pkg::SmuxMode SmuxMode;
-
   logic clk;
   logic rst;
   logic [11:0] frame_time;
@@ -155,7 +139,7 @@ module tb_output_interface;
   logic data_valid;
   logic sync;
   logic [3:0] user_bits;
-  SmuxMode smux_mode;
+  logic smux_active;
   logic frame_clk;
   logic [23:0] channels[0:7];
   logic valid;
@@ -175,7 +159,7 @@ module tb_output_interface;
       .i_data_valid(data_valid),
       .i_sync(sync),
       .i_user_bits(user_bits),
-      .o_smux_mode(smux_mode),
+      .o_smux_active(smux_active),
       .o_frame_clk(frame_clk),
       .o_channels(channels),
       .o_valid(valid),
@@ -213,7 +197,7 @@ module tb_output_interface;
     channel = 3'd0;
     data_valid = 1'b0;
     sync = 1'b1;
-    user_bits = 4'b0000;  // Normal mode (S/MUX2 bit=0)
+    user_bits = 4'b0000;  // S/MUX disabled (bit[1]=0)
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
@@ -226,15 +210,15 @@ module tb_output_interface;
       $error("FAIL: locked not asserted");
       pass = 0;
     end
-    if (smux_mode !== SmuxMode_Standard) begin
-      $error("FAIL: smux_mode not Standard");
+    if (smux_active !== 1'b0) begin
+      $error("FAIL: smux_active should be 0");
       pass = 0;
     end
 
-    // Test 2: S/MUX2 mode
-    $display("=== Test 2: S/MUX2 Mode ===");
+    // Test 2: S/MUX enabled
+    $display("=== Test 2: S/MUX Enabled ===");
     rst = 1'b0;
-    user_bits = 4'b0010;  // S/MUX2 mode (bit[1]=1)
+    user_bits = 4'b0010;  // S/MUX enabled (bit[1]=1)
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
@@ -242,11 +226,11 @@ module tb_output_interface;
     send_frame(5);
 
     if (!locked) begin
-      $error("FAIL: locked not asserted in S/MUX2");
+      $error("FAIL: locked not asserted in S/MUX enabled");
       pass = 0;
     end
-    if (smux_mode !== SmuxMode_Smux2) begin
-      $error("FAIL: smux_mode should be SmuxMode_Smux2 in S/MUX2, got %d", smux_mode);
+    if (smux_active !== 1'b1) begin
+      $error("FAIL: smux_active should be 1 when S/MUX bit is set, got %b", smux_active);
       pass = 0;
     end
     if (pass) begin

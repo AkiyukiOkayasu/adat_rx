@@ -1,5 +1,3 @@
-import adat_pkg::SmuxMode;
-
 /// ADATレシーバ トップモジュール
 ///
 /// ADAT光入力から8チャンネル24ビットPCMをデコードする。
@@ -183,10 +181,10 @@ pub module adat_rx (
     i_adat: input logic,
     /// ADATフレーム周期のクロック出力（sample rateではない）
     /// 通常は44.1/48kHz。
-    /// warning: S/MUX2の時でも44.1kHz/48kHzが出力されることに注意
+    /// warning: S/MUX有効時でも44.1kHz/48kHzが出力されることに注意
     o_frame_clk: output logic,
-    /// 検出されたS/MUXモード
-    o_smux_mode: output SmuxMode,
+    /// 検出されたS/MUX有効状態 (1: enabled, 0: disabled)
+    o_smux_active: output logic,
     /// 8チャンネルPCMデータ出力
     o_channels: output logic<24> [8],
     /// データ有効信号
@@ -286,7 +284,7 @@ pub module adat_rx (
         i_data_valid: data_valid ,
         i_sync      : sync_detect,
         i_user_bits : user_bits  ,
-        o_smux_mode : o_smux_mode,
+        o_smux_active : o_smux_active,
         o_frame_clk : o_frame_clk,
         o_channels  : o_channels ,
         o_valid     : o_valid    ,
@@ -443,9 +441,6 @@ module adat_generator #(
 endmodule
 
 module tb_adat_rx;
-  // パッケージをインポート
-  import adat_rx_adat_pkg::*;
-
   // クロック・リセット
   logic           clk;
   logic           rst;
@@ -453,7 +448,7 @@ module tb_adat_rx;
   // DUT信号
   logic           adat_in;
   logic           frame_clk;
-  SmuxMode        smux_mode;
+  logic           smux_active;
   logic    [23:0] channels  [0:7];
   logic           valid;
   logic           locked;
@@ -571,7 +566,7 @@ module tb_adat_rx;
       .i_rst(rst),
       .i_adat(adat_in_muxed),
       .o_frame_clk(frame_clk),
-      .o_smux_mode(smux_mode),
+      .o_smux_active(smux_active),
       .o_channels(channels),
       .o_valid(valid),
       .o_locked(locked)
@@ -857,9 +852,9 @@ module tb_adat_rx;
       $error("S/MUX2 FAIL: Receiver not locked");
     end
 
-    // S/MUX2期待値チェック
-    if (smux_mode != SmuxMode_Smux2) begin
-      $error("S/MUX2 FAIL: S/MUX mode is not S/MUX2");
+    // S/MUX有効期待値チェック
+    if (smux_active != 1'b1) begin
+      $error("S/MUX2 FAIL: smux_active is not 1");
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
@@ -900,9 +895,9 @@ module tb_adat_rx;
       $error("88.2kHz S/MUX2 FAIL: Receiver not locked");
     end
 
-    // S/MUX2期待値チェック
-    if (smux_mode != SmuxMode_Smux2) begin
-      $error("88.2kHz S/MUX2 FAIL: S/MUX mode is not S/MUX2");
+    // S/MUX有効期待値チェック
+    if (smux_active != 1'b1) begin
+      $error("88.2kHz S/MUX2 FAIL: smux_active is not 1");
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)

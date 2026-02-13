@@ -1,21 +1,14 @@
 /// ADATデコーダ共通パッケージ
 ///
-/// S/MUXモード定義
+/// S/MUX有効状態定義
 pub package adat_pkg {
-    /// S/MUX mode
+    /// S/MUX active state
     ///
-    /// ADATプロトコルはS/MUXを使用して高サンプルレートに対応
-    /// - Standard: 44.1kHz / 48kHz 8ch
-    /// - S/MUX2: 88.2kHz / 96kHz 4ch
-    /// - S/MUX4: 176.4kHz / 192kHz 2ch
+    /// warning: UserBitから判定できるのはS/MUXが有効か無効かのみ。S/MUX2とS/MUX4の区別は原理的に不可能。
     enum SmuxMode {
-        /// 44.1kHz / 48kHz - 8ch
-        Standard,
-        /// S/MUX2 88.2kHz / 96kHz - 4ch
-        Smux2,
-        /// S/MUX4 176.4kHz / 192kHz - 2ch
-        /// warning: 現時点の実装ではS/MUX4は未対応
-        /// S/MUX4はUserBitからは判定不能のため、エンドユーザーが明示的に設定するか、外部WordClock参照が必要
-        Smux4,
+        /// S/MUX無効 (Standard ADAT)
+        Disabled,
+        /// S/MUX有効 (S/MUX2/S/MUX4は区別しない)
+        Enabled,
     }
 }
