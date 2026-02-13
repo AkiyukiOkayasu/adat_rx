@@ -130,7 +130,7 @@ pub module timing_tracker (
                 frame_count = frame_count + 12'd1;
             }
         }
-     }
+    }
 }
 
 #[test(tb_timing_tracker)]
@@ -212,4 +212,3 @@ embed (inline) sv{{{
         end
     endmodule
 }}}
-

@@ -206,4 +206,3 @@ module tb_bit_decoder;
   end
 endmodule
 }}}
-

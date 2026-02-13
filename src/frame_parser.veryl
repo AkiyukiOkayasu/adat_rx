@@ -152,17 +152,17 @@ pub module frame_parser (
                 r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
                 r_channel = 3'd7;
                 r_valid   = 1'b1;
-             } else {
-                 r_valid = 1'b0;
-             }
-         } else {
-             r_valid = 1'b0;
-         }
-     }
- }
+            } else {
+                r_valid = 1'b0;
+            }
+        } else {
+            r_valid = 1'b0;
+        }
+    }
+}
 
- #[test(tb_frame_parser)]
- embed (inline) sv{{{
+#[test(tb_frame_parser)]
+embed (inline) sv{{{
  `timescale 1ns / 1ps
 
  module tb_frame_parser;

@@ -182,7 +182,7 @@ pub module output_interface (
                 valid_out = 1'b0;
             }
         }
-     }
+    }
 }
 
 #[test(tb_output_interface)]
@@ -323,4 +323,3 @@ module tb_output_interface;
   end
 endmodule
 }}}
-
