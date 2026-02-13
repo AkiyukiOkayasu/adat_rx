@@ -82,8 +82,6 @@ pub module adat_rx (
     o_valid: output logic,
     /// 同期ロック状態
     o_locked: output logic,
-    /// 有効なチャンネル数
-    o_valid_channels: output logic<4>,
 ) {
     // 内部信号
     var adat_edge  : logic    ;
@@ -169,20 +167,19 @@ pub module adat_rx (
 
     // 出力インターフェースモジュール
     inst u_output_interface: output_interface (
-        i_clk           : i_clk           ,
-        i_rst           : i_rst           ,
-        i_frame_time    : frame_time      ,
-        i_data          : pcm_data        ,
-        i_channel       : channel         ,
-        i_data_valid    : data_valid      ,
-        i_sync          : sync_detect     ,
-        i_user_bits     : user_bits       ,
-        o_smux_mode     : o_smux_mode     ,
-        o_frame_clk     : o_frame_clk     ,
-        o_channels      : o_channels      ,
-        o_valid         : o_valid         ,
-        o_locked        : o_locked        ,
-        o_valid_channels: o_valid_channels,
+        i_clk       : i_clk      ,
+        i_rst       : i_rst      ,
+        i_frame_time: frame_time ,
+        i_data      : pcm_data   ,
+        i_channel   : channel    ,
+        i_data_valid: data_valid ,
+        i_sync      : sync_detect,
+        i_user_bits : user_bits  ,
+        o_smux_mode : o_smux_mode,
+        o_frame_clk : o_frame_clk,
+        o_channels  : o_channels ,
+        o_valid     : o_valid    ,
+        o_locked    : o_locked   ,
     );
 }
 
@@ -457,7 +454,6 @@ module tb_adat_rx;
   logic [ 2:0] dbg_channel;
   logic        dbg_data_valid;
   logic [ 3:0] dbg_frame_cnt;
-  logic [ 3:0] valid_channels;
 
   adat_rx_adat_rx u_dut (
       .i_clk(clk),
@@ -467,8 +463,7 @@ module tb_adat_rx;
       .o_smux_mode(smux_mode),
       .o_channels(channels),
       .o_valid(valid),
-      .o_locked(locked),
-      .o_valid_channels(valid_channels)
+      .o_locked(locked)
   );
 
   assign dbg_adat_edge = u_dut.adat_edge;
@@ -755,9 +750,6 @@ module tb_adat_rx;
     if (smux_mode != SmuxMode_Smux2) begin
       $error("S/MUX2 FAIL: S/MUX mode is not S/MUX2");
     end
-    if (valid_channels !== 4) begin
-      $error("S/MUX2 FAIL: valid_channels should be 4, got %0d", valid_channels);
-    end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)
     wait_for_valid("");
@@ -800,9 +792,6 @@ module tb_adat_rx;
     // S/MUX2期待値チェック
     if (smux_mode != SmuxMode_Smux2) begin
       $error("88.2kHz S/MUX2 FAIL: S/MUX mode is not S/MUX2");
-    end
-    if (valid_channels !== 4) begin
-      $error("88.2kHz S/MUX2 FAIL: valid_channels should be 4, got %0d", valid_channels);
     end
 
     // データ整合性チェック (物理チャンネル0-7がそのまま出力されることを確認)

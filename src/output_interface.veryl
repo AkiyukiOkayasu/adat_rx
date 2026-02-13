@@ -35,8 +35,6 @@ module output_interface (
     o_valid: output logic,
     /// 同期ロック状態
     o_locked: output logic,
-    /// 有効なチャンネル数
-    o_valid_channels: output logic<4>,
 ) {
     // S/MUXモードレジスタ
     var smux_mode: SmuxMode;
@@ -67,18 +65,10 @@ module output_interface (
         }
     }
 
-    assign o_smux_mode  = smux_mode;
-    assign o_frame_clk  = word_clk;
-    assign o_valid      = valid_out;
-    assign o_locked     = locked;
-
-    always_comb {
-        if smux2_mode {
-            o_valid_channels = 4'd4;
-        } else {
-            o_valid_channels = 4'd8;
-        }
-    }
+    assign o_smux_mode = smux_mode;
+    assign o_frame_clk = word_clk;
+    assign o_valid     = valid_out;
+    assign o_locked    = locked;
 
     // チャンネル出力割り当て
     for i in 0..8 :g_ch_out {
@@ -124,15 +114,15 @@ module output_interface (
     // チャンネルデータ格納
     always_ff (i_clk, i_rst) {
         if_reset {
-            channels[0]  = 24'd0;
-            channels[1]  = 24'd0;
-            channels[2]  = 24'd0;
-            channels[3]  = 24'd0;
-            channels[4]  = 24'd0;
-            channels[5]  = 24'd0;
-            channels[6]  = 24'd0;
-            channels[7]  = 24'd0;
-            valid_out    = 1'b0;
+            channels[0] = 24'd0;
+            channels[1] = 24'd0;
+            channels[2] = 24'd0;
+            channels[3] = 24'd0;
+            channels[4] = 24'd0;
+            channels[5] = 24'd0;
+            channels[6] = 24'd0;
+            channels[7] = 24'd0;
+            valid_out   = 1'b0;
         } else if i_data_valid {
             // チャンネルデータを格納
             channels[i_channel] = i_data;
@@ -170,7 +160,6 @@ module tb_output_interface;
   logic [23:0] channels[0:7];
   logic valid;
   logic locked;
-  logic [3:0] valid_channels;
 
   initial begin
     clk = 0;
@@ -190,8 +179,7 @@ module tb_output_interface;
       .o_frame_clk(frame_clk),
       .o_channels(channels),
       .o_valid(valid),
-      .o_locked(locked),
-      .o_valid_channels(valid_channels)
+      .o_locked(locked)
   );
 
   task send_frame(input int frames);
@@ -242,10 +230,6 @@ module tb_output_interface;
       $error("FAIL: smux_mode not Standard");
       pass = 0;
     end
-    if (valid_channels !== 4'd8) begin
-      $error("FAIL: valid_channels should be 8 in normal mode, got %d", valid_channels);
-      pass = 0;
-    end
 
     // Test 2: S/MUX2 mode
     $display("=== Test 2: S/MUX2 Mode ===");
@@ -265,11 +249,6 @@ module tb_output_interface;
       $error("FAIL: smux_mode should be SmuxMode_Smux2 in S/MUX2, got %d", smux_mode);
       pass = 0;
     end
-    if (valid_channels !== 4'd4) begin
-      $error("FAIL: valid_channels should be 4 in S/MUX2 mode, got %d", valid_channels);
-      pass = 0;
-    end
-
     if (pass) begin
       $display("*** TEST PASSED ***");
     end else begin
