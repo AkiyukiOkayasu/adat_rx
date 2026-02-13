@@ -8,6 +8,20 @@
 /// - 96kHz: 4チャンネル (S/MUX2)
 /// - 192kHz: 2チャンネル (S/MUX4)
 ///
+/// # S/MUX時のチャンネルマッピング（利用側で実装）
+/// 本モジュールは `o_channels[8]` を物理スロットとして出力し、S/MUXの論理チャンネル再構成は行わない。
+///
+/// - S/MUX2 (96kHz / 88.2kHz, 4ch)
+///   - Logical CH0 <= `o_channels[0]` + `o_channels[1]`
+///   - Logical CH1 <= `o_channels[2]` + `o_channels[3]`
+///   - Logical CH2 <= `o_channels[4]` + `o_channels[5]`
+///   - Logical CH3 <= `o_channels[6]` + `o_channels[7]`
+/// - S/MUX4 (192kHz / 176.4kHz, 2ch)
+///   - Logical CH0 <= `o_channels[0]` + `o_channels[1]` + `o_channels[2]` + `o_channels[3]`
+///   - Logical CH1 <= `o_channels[4]` + `o_channels[5]` + `o_channels[6]` + `o_channels[7]`
+///
+/// 時間順は、各Logical CH内では添字の小さいスロットが先のサンプル。
+///
 /// # ADATフレーム構造 (256 bits @ 48kHz = 20.83us)
 ///
 /// 5ビットニブル単位で構成。各ニブル: [4bit data][1bit separator=1]
@@ -183,11 +197,11 @@ pub module adat_rx (
     /// 通常は44.1/48kHz。
     /// warning: S/MUX有効時でも44.1kHz/48kHzが出力されることに注意
     o_frame_clk: output logic,
-    /// 検出されたS/MUX有効状態 (1: enabled, 0: disabled)
-    /// UserBit2による自動判定
-    /// warning: UserBitによるS/MUX2とS/MUX4の区別は原理的に不可能なので、あくまでS/MUXが有効or無効のみを示す
+    /// UserBit2に基づいて検出されたS/MUX有効状態 (1: enabled, 0: disabled)
+    /// warning: S/MUX2とS/MUX4の判別は原理的に不可能なので、あくまでS/MUXが有効or無効のみを示す
     o_smux_active: output logic,
-    /// 8チャンネルPCMデータ出力
+    /// 8チャンネルPCMデータ出力（ADAT物理スロット）
+    /// warning: S/MUX有効時の論理チャンネル再構成は利用側の実装が必要
     o_channels: output logic<24> [8],
     /// データ有効信号
     o_valid: output logic,
