@@ -10,8 +10,7 @@ Verylによる実装。
 - ✅ 8チャンネル24bit PCMデータの受信・デコード完了
 - ✅ 4bitユーザーデータの抽出完了
 - ✅ サンプルレート対応: 48kHz, 44.1kHz, 96kHz (S/MUX2), 88.2kHz (S/MUX2)
-- ✅ 厳密比較テストパス（`just run`）
-- ✅ 全ユニットテストパス（`just unit-tests`）
+- ✅ 厳密比較テストパス（`veryl test`）
 
 ### TODO
 
@@ -58,8 +57,11 @@ S/MUX2では1フレームあたり2サンプル分が格納される。
 veryl test
 ```
 
-FSTファイル出力付き:
+### 波形出力付き
+
+FSTファイルで出力
 
 ```sh
 veryl test --wave
+surfer src/tb_adat_rx.fst
 ```
