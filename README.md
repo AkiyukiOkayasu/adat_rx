@@ -15,7 +15,12 @@ Verylによる実装。
 ## ADAT基本仕様
 
 48kHzか44.1kHzが基本サンプルレートであり、8ch伝送できる。
-1フレームは256bit。
+
+### フレーム仕様
+
+1フレームは256bitで構成される。
+<img width="10420" height="126" alt="wavedrom(2)" src="https://github.com/user-attachments/assets/5244e7e5-140d-446a-850c-879a64533172" />
+
 
 ### エンコード
 
