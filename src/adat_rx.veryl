@@ -96,7 +96,6 @@ pub module adat_rx (
     var bits      : logic<5> ;
     var bit_count : logic<3> ;
     var bits_valid: logic    ;
-    var edge_delay: logic    ;
     var user_bits : logic<4> ;
     var pcm_data  : logic<24>;
     var channel   : logic<3> ;
@@ -133,13 +132,13 @@ pub module adat_rx (
     );
 
     // ビットデコーダ入力を1サイクル遅延
-    always_ff (i_clk, i_rst) {
-        if_reset {
-            edge_delay = 1'b0;
-        } else {
-            edge_delay = adat_edge;
-        }
-    }
+    var edge_delay: logic;
+    inst u_delay_edge: $std::delay (
+        i_clk            ,
+        i_rst            ,
+        i_d  : adat_edge ,
+        o_d  : edge_delay,
+    );
 
     // ビットデコーダモジュール
     inst u_bit_decoder: bit_decoder (
