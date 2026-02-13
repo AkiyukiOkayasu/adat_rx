@@ -14,6 +14,14 @@ import adat_pkg::SmuxMode;
 ///
 /// 5ビットニブル単位で構成。各ニブル: [4bit data][1bit separator=1]
 ///
+/// ## シリアル伝送順とビット有意性の定義
+/// - シリアル伝送順: フレーム先頭から順方向（`build_frame[255]` → `build_frame[0]`）。
+/// - 5bitニブルの伝送順: `D23..D20` のように data部は MSB-first。
+/// - PCM 24bit語のビット有意性: `o_channels[x][23]` がMSB、`o_channels[x][0]` がLSB。
+/// - したがって nibble 列 `D23..D20, D19..D16, ... D3..D0` は
+///   `23:20, 19:16, ... 3:0` にそのまま対応する。
+/// - 本設計では24bit語を単一ベクタとして扱うため、byte order（エンディアン）の議論は発生しない。
+///
 /// ```wavedrom
 /// {
 ///   signal: [
@@ -36,14 +44,14 @@ import adat_pkg::SmuxMode;
 ///       name: 'ADAT in',
 ///       wave: '10.........1====1====1====1====1====1====1====1====1',
 ///       data: [
-///         'U0', 'U1', 'U2', 'U3',
-///         'D0', 'D1', 'D2', 'D3',
-///         'D4', 'D5', 'D6', 'D7',
-///         'D8', 'D9', 'D10', 'D11',
-///         'D12', 'D13', 'D14', 'D15',
-///         'D16', 'D17', 'D18', 'D19',
-///         'D20', 'D21', 'D22', 'D23',
-///         'D0', 'D1', 'D2', 'D3'
+///         'U3', 'U2', 'U1', 'U0',
+///         'D23', 'D22', 'D21', 'D20',
+///         'D19', 'D18', 'D17', 'D16',
+///         'D15', 'D14', 'D13', 'D12',
+///         'D11', 'D10', 'D9', 'D8',
+///         'D7', 'D6', 'D5', 'D4',
+///         'D3', 'D2', 'D1', 'D0',
+///         'D23', 'D22', 'D21', 'D20'
 ///       ]
 ///     }
 ///   ],
@@ -56,13 +64,13 @@ import adat_pkg::SmuxMode;
 /// | ビット | 内容 | 説明 |
 /// |--------|------|------|
 /// | 0-10 | 0000000000 + 1 | SYNC: 10ビットの0（NRZIで無遷移） + separator=1|
-/// | 11-15 | U0-U3 + 1 | User nibble: User bits[3:0] + separator|
-/// | 16-20 | D0-D3 + 1 | CH0 nibble0: audio[3:0] + separator |
-/// | 21-25 | D4-D7 + 1 | CH0 nibble1: audio[7:4] + separator |
-/// | 26-30 | D8-D11 + 1 | CH0 nibble2: audio[11:8] + separator |
-/// | 31-35 | D12-D15 + 1 | CH0 nibble3: audio[15:12] + separator |
-/// | 36-40 | D16-D19 + 1 | CH0 nibble4: audio[19:16] + separator |
-/// | 41-45 | D20-D23 + 1 | CH0 nibble5: audio[23:20] + separator |
+/// | 11-15 | U3-U0 + 1 | User nibble: User bits[3:0] + separator|
+/// | 16-20 | D23-D20 + 1 | CH0 nibble0: audio[23:20] + separator |
+/// | 21-25 | D19-D16 + 1 | CH0 nibble1: audio[19:16] + separator |
+/// | 26-30 | D15-D12 + 1 | CH0 nibble2: audio[15:12] + separator |
+/// | 31-35 | D11-D8 + 1 | CH0 nibble3: audio[11:8] + separator |
+/// | 36-40 | D7-D4 + 1 | CH0 nibble4: audio[7:4] + separator |
+/// | 41-45 | D3-D0 + 1 | CH0 nibble5: audio[3:0] + separator |
 /// | 46-75 | ... | CH1 (上記と同じ6 nibbles) |
 /// | ... | ... | CH2-CH7 (各30ビット) |
 ///
