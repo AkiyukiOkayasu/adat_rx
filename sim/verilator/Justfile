@@ -35,27 +35,7 @@ test-wave:
 # Legacy: Run all tests via veryl test (DEPRECATED - use 'just test' instead)
 run: test
 
-# Legacy: Verilatorビルド（トレースなし）
-build: veryl
-  {{VERILATOR}} {{VERILATOR_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
 
-# Legacy: Verilatorビルド（トレース付き）
-build-trace: veryl
-  {{VERILATOR}} {{VERILATOR_TRACE_FLAGS}} --top-module tb_adat_rx -Wno-DECLFILENAME -f {{PROJ_ROOT}}/adat_rx.f {{PROJ_ROOT}}/tests/tb_adat_rx.sv {{PROJ_ROOT}}/tests/adat_generator.sv sim_main.cpp
-
-# Legacy: 実行（トレースなし）
-# Direct Verilator execution (DEPRECATED - use 'just test' instead)
-@_run-verilator: build
-  ./{{OBJ_DIR}}/Vtb_adat_rx
-
-# Legacy: 実行（FSTトレース出力付き）
-# Direct Verilator execution with tracing (DEPRECATED - use 'just test-wave' instead)
-@_run-verilator-trace: build-trace
-  ./{{OBJ_DIR}}/Vtb_adat_rx
-
-# 波形表示 (Surfer) - Legacy Verilator flow (DEPRECATED - use 'just test-wave' instead)
-wave: _run-verilator-trace
-  surfer "/Users/akiyuki/Documents/AkiyukiProjects/adat_rx/sim/verilator/adat_rx.fst"
 
 # クリーンアップ
 clean:
