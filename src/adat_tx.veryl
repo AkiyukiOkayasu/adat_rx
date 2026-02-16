@@ -1,0 +1,348 @@
+/// ADAT TXトップモジュール
+///
+/// 8ch 24bit PCMをADATフレームへ変換し、NRZI信号として出力する。
+/// 送信パイプラインは以下の3段で構成される。
+///
+/// 1. `tx_frame_builder`
+///    - `i_frame_clk`立ち上がりをトリガに256bit ADATフレームを構築
+/// 2. `tx_bit_serializer`
+///    - 256bitフレームをMSB-firstでシリアル化
+///    - `SAMPLE_RATE`に応じて44.1kHz/48kHzのビット周期を選択
+/// 3. `tx_nrzi_encoder`
+///    - シリアルビットをNRZIへ変換して`o_adat`へ出力
+///
+/// ```wavedrom
+/// {
+///   signal: [
+///     { name: 'i_clk', wave: 'p................' },
+///     { name: 'i_frame_clk', wave: '0..10.............' },
+///     { name: 'frame_build_pulse', wave: '0...10............' },
+///     { name: 'frame_ready', wave: '0....10...........' },
+///     { name: 'serial_bit_valid', wave: '0........1.1.1.1.1' },
+///     { name: 'serial_frame_done', wave: '0................10' },
+///     { name: 'o_adat', wave: '0........x.1.x.0.x' }
+///   ]
+/// }
+/// ```
+pub module adat_tx #(
+    /// システムクロック周波数 [Hz]
+    param CLK_FREQ: u32 = 50_000_000,
+    /// サンプルレート [Hz] (44.1kHz / 48kHz)
+    param SAMPLE_RATE: u32 = 48000,
+)(
+    /// システムクロック (50MHz)
+    i_clk: input clock,
+    /// アクティブハイリセット
+    i_rst: input reset,
+    /// 外部フレームクロック立ち上がりで新規フレーム送信開始
+    i_frame_clk: input logic,
+    /// 8ch 24bit PCM入力
+    i_channels: input logic<24> [8],
+    /// User bits入力（S/MUXフラグ含む）
+    i_user_bits: input logic<4>,
+    /// ADAT NRZI出力
+    o_adat: output logic,
+) {
+    var frame_build_pulse : logic     ;
+    var frame_data        : logic<256>;
+    var frame_ready       : logic     ;
+    var serial_bit        : logic     ;
+    var serial_bit_valid  : logic     ;
+    var serial_frame_done : logic     ;
+    var nrzi_rst          : logic     ;
+
+    assign nrzi_rst = ~i_rst;
+
+    // フレームクロック立ち上がり検出
+    inst u_frame_clk_edge: $std::edge_detector (
+        i_clk                     ,
+        i_rst                     ,
+        i_clear  : 0              ,
+        i_data   : i_frame_clk    ,
+        o_edge   : _              ,
+        o_posedge: frame_build_pulse,
+        o_negedge: _              ,
+    );
+
+    // フレーム構築
+    inst u_frame_builder: tx_frame_builder (
+        i_clk      : i_clk            ,
+        i_rst      : i_rst            ,
+        i_channels : i_channels       ,
+        i_user_bits: i_user_bits      ,
+        i_build    : frame_build_pulse,
+        o_frame    : frame_data       ,
+        o_ready    : frame_ready      ,
+    );
+
+    // 256bitフレームのシリアル化
+    inst u_serializer: tx_bit_serializer #(CLK_FREQ) (
+        i_clk        : i_clk        ,
+        i_rst        : i_rst        ,
+        i_frame_data : frame_data   ,
+        i_load       : frame_ready  ,
+        i_sample_rate: SAMPLE_RATE  ,
+        o_bit        : serial_bit   ,
+        o_bit_valid  : serial_bit_valid,
+        o_frame_done : serial_frame_done,
+    );
+
+    // NRZIエンコード
+    inst u_nrzi_encoder: tx_nrzi_encoder (
+        i_clk  : i_clk          ,
+        i_rst  : nrzi_rst       ,
+        i_bit  : serial_bit     ,
+        i_valid: serial_bit_valid,
+        o_nrzi : o_adat         ,
+    );
+}
+
+#[test(tb_adat_tx)]
+embed (inline) sv{{{
+`timescale 1ns / 1ps
+
+module tb_adat_tx;
+  localparam int CLK_FREQ = 50_000_000;
+  localparam int SAMPLE_RATE = 48000;
+
+  logic clk;
+  logic rst;
+  logic frame_clk;
+  logic [23:0] channels[0:7];
+  logic [3:0] user_bits;
+  logic adat_out;
+  int pass;
+
+  initial begin
+    clk = 1'b0;
+    forever #10 clk = ~clk;
+  end
+
+  adat_rx_adat_tx #(
+      .CLK_FREQ(CLK_FREQ),
+      .SAMPLE_RATE(SAMPLE_RATE)
+  ) u_dut (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_frame_clk(frame_clk),
+      .i_channels(channels),
+      .i_user_bits(user_bits),
+      .o_adat(adat_out)
+  );
+
+  function automatic [29:0] encode_24bit(input [23:0] data);
+    begin
+      encode_24bit[29:25] = {data[23:20], 1'b1};
+      encode_24bit[24:20] = {data[19:16], 1'b1};
+      encode_24bit[19:15] = {data[15:12], 1'b1};
+      encode_24bit[14:10] = {data[11:8], 1'b1};
+      encode_24bit[9:5] = {data[7:4], 1'b1};
+      encode_24bit[4:0] = {data[3:0], 1'b1};
+    end
+  endfunction
+
+  function automatic int expected_bit_clocks(input int bit_index, input int sr);
+    longint bit_rate;
+    longint prev_edge;
+    longint next_edge;
+    longint prev_numer;
+    longint next_numer;
+    begin
+      bit_rate = sr * 256;
+      prev_numer = (longint'(bit_index) * longint'(CLK_FREQ)) + (bit_rate / 2);
+      next_numer = (longint'(bit_index + 1) * longint'(CLK_FREQ)) + (bit_rate / 2);
+      prev_edge = prev_numer / bit_rate;
+      next_edge = next_numer / bit_rate;
+      expected_bit_clocks = next_edge - prev_edge;
+    end
+  endfunction
+
+  task automatic pulse_frame_clk;
+    begin
+      frame_clk = 1'b0;
+      @(posedge clk);
+      frame_clk = 1'b1;
+      @(posedge clk);
+      frame_clk = 1'b0;
+    end
+  endtask
+
+  task automatic wait_frame_ready(input string tag);
+    int timeout;
+    begin
+      timeout = 0;
+      while ((u_dut.frame_ready !== 1'b1) && (timeout < 200)) begin
+        @(posedge clk);
+        timeout = timeout + 1;
+      end
+
+      if (u_dut.frame_ready !== 1'b1) begin
+        $error("FAIL[%s]: frame_ready timeout", tag);
+        pass = 0;
+      end
+    end
+  endtask
+
+  task automatic check_frame_layout(input string tag);
+    reg [255:0] expected;
+    begin
+      expected[255:246] = 10'b0000000000;
+      expected[245] = 1'b1;
+      expected[244:241] = user_bits;
+      expected[240] = 1'b1;
+      expected[239:210] = encode_24bit(channels[0]);
+      expected[209:180] = encode_24bit(channels[1]);
+      expected[179:150] = encode_24bit(channels[2]);
+      expected[149:120] = encode_24bit(channels[3]);
+      expected[119:90] = encode_24bit(channels[4]);
+      expected[89:60] = encode_24bit(channels[5]);
+      expected[59:30] = encode_24bit(channels[6]);
+      expected[29:0] = encode_24bit(channels[7]);
+
+      if (u_dut.frame_data !== expected) begin
+        $error("FAIL[%s]: frame_data mismatch", tag);
+        pass = 0;
+      end
+    end
+  endtask
+
+  task automatic check_serial_stream(input string tag, input int sr, output int line_toggles);
+    int bit_idx;
+    int cycles_since_prev;
+    int timeout;
+    int exp_cycles;
+    logic prev_level;
+    begin
+      bit_idx = 0;
+      cycles_since_prev = 0;
+      timeout = 0;
+      line_toggles = 0;
+      prev_level = adat_out;
+
+      while ((bit_idx < 256) && (timeout < 7000)) begin
+        @(posedge clk);
+        timeout = timeout + 1;
+        cycles_since_prev = cycles_since_prev + 1;
+
+        if (adat_out !== prev_level) begin
+          line_toggles = line_toggles + 1;
+        end
+        prev_level = adat_out;
+
+        if (u_dut.serial_bit_valid) begin
+          exp_cycles = expected_bit_clocks(bit_idx, sr);
+          // frame_builder->serializer間がレジスタ受け渡しのため、先頭ビットのみ+1サイクル
+          if (bit_idx == 0) begin
+            exp_cycles = exp_cycles + 1;
+          end
+          if (cycles_since_prev !== exp_cycles) begin
+            $error("FAIL[%s]: bit timing mismatch bit=%0d expected=%0d got=%0d", tag, bit_idx,
+                   exp_cycles, cycles_since_prev);
+            pass = 0;
+          end
+
+          if (bit_idx == 255) begin
+            if (!u_dut.serial_frame_done) begin
+              $error("FAIL[%s]: frame_done not asserted at final bit", tag);
+              pass = 0;
+            end
+          end else if (u_dut.serial_frame_done) begin
+            $error("FAIL[%s]: frame_done asserted early at bit=%0d", tag, bit_idx);
+            pass = 0;
+          end
+
+          cycles_since_prev = 0;
+          bit_idx = bit_idx + 1;
+        end
+      end
+
+      if (bit_idx != 256) begin
+        $error("FAIL[%s]: did not observe 256 valid bits", tag);
+        pass = 0;
+      end
+
+      @(posedge clk);
+      if (u_dut.serial_bit_valid || u_dut.serial_frame_done) begin
+        $error("FAIL[%s]: serializer outputs should deassert after frame", tag);
+        pass = 0;
+      end
+
+      if (line_toggles == 0) begin
+        $error("FAIL[%s]: NRZI output did not toggle", tag);
+        pass = 0;
+      end
+    end
+  endtask
+
+  task automatic load_pattern0;
+    begin
+      user_bits = 4'hA;
+      channels[0] = 24'h123456;
+      channels[1] = 24'h789ABC;
+      channels[2] = 24'hDEF012;
+      channels[3] = 24'h345678;
+      channels[4] = 24'h9ABCDE;
+      channels[5] = 24'hF01234;
+      channels[6] = 24'h567890;
+      channels[7] = 24'hABCDEF;
+    end
+  endtask
+
+  task automatic load_pattern1;
+    begin
+      user_bits = 4'h5;
+      channels[0] = 24'h000000;
+      channels[1] = 24'h111111;
+      channels[2] = 24'h222222;
+      channels[3] = 24'h333333;
+      channels[4] = 24'h444444;
+      channels[5] = 24'h555555;
+      channels[6] = 24'h666666;
+      channels[7] = 24'h777777;
+    end
+  endtask
+
+  int toggles0;
+  int toggles1;
+  int i;
+
+  initial begin
+    pass = 1;
+    rst = 1'b0;
+    frame_clk = 1'b0;
+    user_bits = 4'd0;
+    toggles0 = 0;
+    toggles1 = 0;
+    for (i = 0; i < 8; i++) begin
+      channels[i] = 24'd0;
+    end
+
+    repeat (2) @(posedge clk);
+    rst = 1'b1;
+    repeat (2) @(posedge clk);
+
+    // frame0
+    load_pattern0();
+    pulse_frame_clk();
+    wait_frame_ready("frame0");
+    check_frame_layout("frame0");
+    check_serial_stream("frame0", SAMPLE_RATE, toggles0);
+
+    // frame1
+    load_pattern1();
+    pulse_frame_clk();
+    wait_frame_ready("frame1");
+    check_frame_layout("frame1");
+    check_serial_stream("frame1", SAMPLE_RATE, toggles1);
+
+    if (pass) begin
+      $display("*** TEST PASSED ***");
+    end else begin
+      $error("*** TEST FAILED ***");
+    end
+
+    #20;
+    $finish;
+  end
+endmodule
+}}}

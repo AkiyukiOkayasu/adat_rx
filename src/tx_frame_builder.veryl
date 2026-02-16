@@ -1,8 +1,13 @@
 /// ADAT TXフレームビルダー
 ///
-/// 8ch x 24bit PCMと4bit User nibbleから256bitフレームを構築する。
-/// フレーム構造: [SYNC 11bit][User 5bit][Audio 240bit]
-module tx_frame_builder (
+/// 8ch 24bit PCMとUser bitsから256bit ADATフレームを構築する。
+/// フレーム構造:
+///   - SYNC: 10個の0 + separator (1)  [255:246] => 0000000000, [245] => 1
+///   - User: 4bit + separator (1)     [244:241] => user_bits, [240] => 1
+///   - CH0-7: 各30bit (6 nibbles)    [239:0]    => encode_24bit(ch0..7)
+///
+/// 各5bit nibbleは [4bit data][1bit separator=1] で構成される。
+pub module tx_frame_builder (
     /// システムクロック
     i_clk: input clock,
     /// アクティブハイリセット

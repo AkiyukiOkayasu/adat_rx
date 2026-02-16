@@ -1,8 +1,14 @@
 /// TXビットシリアライザ
 ///
-/// 256bit ADATフレームをビットストリームへ変換する。
-/// ビット出力順は MSB-first (bit[255] -> bit[0])。
-module tx_bit_serializer #(
+/// 256bitフレームをMSB-first（bit 255 → bit 0）でシリアル出力する。
+/// ビットタイミングは`SAMPLE_RATE * 256`に基づく分数補間を使用。
+/// 48kHzで約4.07 clk/bit, 44.1kHzで約4.46 clk/bit。
+///
+/// ## Usage
+/// 1. `i_load`パルスで`i_frame_data`をロード
+/// 2. 自動でビット出力開始（MSB first）
+/// 3. 256bit完了時に`o_frame_done`パルス
+pub module tx_bit_serializer #(
     /// システムクロック周波数 [Hz]
     param CLK_FREQ: u32 = 50_000_000,
 ) (
