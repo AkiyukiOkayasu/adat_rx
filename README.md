@@ -1,20 +1,22 @@
-# ADAT decoder
+# ADAT transceiver
 
 [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-2ea44f?logo=github)](https://akiyukiokayasu.github.io/adat_rx/)
 
-ADAT光入力をデコードして、24bit PCMを出力するVeryl RTL。  
-クロックは入力ADATから復元します（外部PLL不要）。
+ADAT光入力をデコードして24bit PCMを出力、または24bit PCMをADATフレームにエンコードして送信するVeryl RTL。  
+受信クロックは入力ADATから復元します（外部PLL不要）。
 
 ## できること
 
 - ADAT受信と8ch 24bit PCMデコード
+- ADAT送信と8ch 24bit PCMエンコード
 - 44.1kHz / 48kHz 系での動作
 - 96kHz / 88.2kHz 入力（S/MUX有効）の受信テスト済み
-- UserBitに基づくS/MUX有効検出（`o_smux_active`）
+- UserBitに基づくS/MUX有効フラグ設定（送信）と検出（受信: `o_smux_active`）
+- 外部フレームクロック入力による送信タイミング制御
 
 ## 導入前に知るべきこと
 
-- `o_frame_clk` はADATフレーム周期であり、再生サンプルレートそのものではありません。  
+- 受信側の `o_frame_clk` はADATフレーム周期であり、再生サンプルレートそのものではありません。  
   例: 通常モードでは `o_frame_clk` と実サンプルレートは一致しますが、S/MUX有効時は一致しません。
 - S/MUXの基本、モード（S/MUX2/S/MUX4）、制約は [`ADAT_SPEC.md` の「5. S/MUX」](ADAT_SPEC.md#smux) を参照
 - `S/MUX2`/`S/MUX4` のモード対応は [`ADAT_SPEC.md` の「5.1 モード対応」](ADAT_SPEC.md#smux-modes) を参照
@@ -23,8 +25,41 @@ ADAT光入力をデコードして、24bit PCMを出力するVeryl RTL。
 
 ## I/O要点
 
+### RX (Receiver)
 - 入力: `i_clk`（推奨50MHz）, `i_rst`, `i_adat`
 - 出力: `o_channels[8]`, `o_valid`, `o_locked`, `o_frame_clk`, `o_smux_active`
+
+### TX (Transmitter)
+- 入力: `i_clk`（50MHz）, `i_rst`, `i_frame_clk`, `i_channels[8]`, `i_user_bits[4]`
+- 出力: `o_adat`
+
+## 使用例
+
+### RX (Receiver)
+```veryl
+inst rx: adat_rx (
+    i_clk         : clk,
+    i_rst         : rst,
+    i_adat        : adat_in,
+    o_channels    : channels_out,
+    o_valid       : valid,
+    o_locked      : locked,
+    o_frame_clk   : frame_clk_rx,
+    o_smux_active : smux_active,
+);
+```
+
+### TX (Transmitter)
+```veryl
+inst tx: adat_tx (
+    i_clk         : clk,
+    i_rst         : rst,
+    i_frame_clk   : frame_clk_tx,
+    i_channels    : channels_in,
+    i_user_bits   : user_bits,
+    o_adat        : adat_out,
+);
+```
 
 ## 開発者向け（任意）
 
