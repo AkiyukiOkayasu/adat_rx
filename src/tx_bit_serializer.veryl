@@ -143,7 +143,7 @@ module tb_tx_bit_serializer;
   logic rst;
   logic [255:0] frame_data;
   logic load;
-  logic [31:0] sample_rate;
+  logic family;
   logic bit_out;
   logic bit_valid;
   logic frame_done;
@@ -160,7 +160,7 @@ module tb_tx_bit_serializer;
       .i_rst(rst),
       .i_frame_data(frame_data),
       .i_load(load),
-      .i_sample_rate(sample_rate),
+      .i_family(family),
       .o_bit(bit_out),
       .o_bit_valid(bit_valid),
       .o_frame_done(frame_done)
@@ -182,14 +182,16 @@ module tb_tx_bit_serializer;
     end
   endfunction
 
-  task automatic run_frame(input [255:0] frame, input int sr, input string tag);
+  task automatic run_frame(input [255:0] frame, input logic fam, input string tag);
     int bit_idx;
     int cycles_since_prev;
     int timeout;
     int exp_cycles;
+    int sr;
     begin
+      sr = fam ? 48000 : 44100;
       frame_data = frame;
-      sample_rate = sr;
+      family = fam;
       load = 1'b1;
       @(posedge clk);
       load = 1'b0;
@@ -250,14 +252,14 @@ module tb_tx_bit_serializer;
     rst = 1'b0;
     frame_data = 256'd0;
     load = 1'b0;
-    sample_rate = 32'd48000;
+    family = 1'b1;
 
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
 
-    run_frame({8'hD3, 240'h00, 8'h5A}, 48000, "frame0_48k");
-    run_frame(256'h0123456789ABCDEF00112233445566778899AABBCCDDEEFF13579BDF2468ACE0, 44100,
+    run_frame({8'hD3, 240'h00, 8'h5A}, 1'b1, "frame0_48k");
+    run_frame(256'h0123456789ABCDEF00112233445566778899AABBCCDDEEFF13579BDF2468ACE0, 1'b0,
               "frame1_44k1");
 
     if (pass) begin

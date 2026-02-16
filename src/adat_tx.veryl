@@ -132,7 +132,7 @@ module tb_adat_tx_48k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .SAMPLE_RATE(SAMPLE_RATE)
+      .ADAT_FAMILY(1'b1)
   ) u_dut (
       .i_clk(clk),
       .i_rst(rst),
@@ -365,7 +365,6 @@ embed (inline) sv{{{
 
 module tb_echo_loopback_88k;
   localparam int CLK_FREQ = 50_000_000;
-  localparam int SAMPLE_RATE = 88200;
   localparam int CHECK_FRAMES = 11;
 
   logic clk;
@@ -403,7 +402,7 @@ module tb_echo_loopback_88k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .SAMPLE_RATE(SAMPLE_RATE)
+      .ADAT_FAMILY(1'b0)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
@@ -635,7 +634,6 @@ embed (inline) sv{{{
 
 module tb_echo_loopback_96k;
   localparam int CLK_FREQ = 50_000_000;
-  localparam int SAMPLE_RATE = 96000;
   localparam int CHECK_FRAMES = 11;
 
   logic clk;
@@ -673,7 +671,7 @@ module tb_echo_loopback_96k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .SAMPLE_RATE(SAMPLE_RATE)
+      .ADAT_FAMILY(1'b1)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
@@ -905,7 +903,7 @@ embed (inline) sv{{{
 
 module adat_tx #(
     parameter int CLK_FREQ = 50_000_000,
-    parameter int SAMPLE_RATE = 48000
+    parameter logic ADAT_FAMILY = 1'b1
 ) (
     input logic i_clk,
     input logic i_rst,
@@ -918,7 +916,7 @@ module adat_tx #(
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .SAMPLE_RATE(SAMPLE_RATE)
+      .ADAT_FAMILY(ADAT_FAMILY)
   ) u_impl (
       .i_clk(i_clk),
       .i_rst(i_rst),
@@ -955,7 +953,6 @@ endmodule
 
 module tb_echo_loopback;
   localparam int CLK_FREQ = 50_000_000;
-  localparam int SAMPLE_RATE = 48000;
   localparam int CHECK_FRAMES = 11;
 
   logic clk;
@@ -995,7 +992,7 @@ module tb_echo_loopback;
 
   adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .SAMPLE_RATE(SAMPLE_RATE)
+      .ADAT_FAMILY(1'b1)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
