@@ -7,7 +7,7 @@
 ///    - `i_frame_clk`立ち上がりをトリガに256bit ADATフレームを構築
 /// 2. `tx_bit_serializer`
 ///    - 256bitフレームをMSB-firstでシリアル化
-///    - `SAMPLE_RATE`に応じて44.1kHz/48kHzのビット周期を選択
+///    - `ADAT_FAMILY`に応じて44.1kHz/48kHzのビット周期を選択
 /// 3. `tx_nrzi_encoder`
 ///    - シリアルビットをNRZIへ変換して`o_adat`へ出力
 ///
@@ -27,8 +27,8 @@
 pub module adat_tx #(
     /// システムクロック周波数 [Hz]
     param CLK_FREQ: u32 = 50_000_000,
-    /// サンプルレート [Hz] (44.1kHz / 48kHz)
-    param SAMPLE_RATE: u32 = 48000,
+    /// ADATビットレートファミリー (0=F44K1, 1=F48K)
+    param ADAT_FAMILY: logic<1> = 1'b1,
 ) (
     /// システムクロック (50MHz)
     i_clk: input clock,
@@ -41,13 +41,13 @@ pub module adat_tx #(
     /// User bits入力（S/MUXフラグ含む）
     i_user_bits: input logic<4>,
     /// ADAT NRZI出力
-    o_adat: output logic,
+     o_adat: output logic,
 ) {
-    /// ADATビットレートファミリー
+    /// ADATビットレートファミリー (ドキュメンテーション用)
     ///
     /// 物理ビットレートは2種類のみ:
-    /// - F44K1: 44.1kHz × 256 = 11,289,600 bps
-    /// - F48K:  48kHz × 256 = 12,288,000 bps
+    /// - 0 (F44K1): 44.1kHz × 256 = 11,289,600 bps
+    /// - 1 (F48K):  48kHz × 256 = 12,288,000 bps
     enum AdatFamily: logic {
         F44K1 = 1'b0,
         F48K = 1'b1,
@@ -93,7 +93,7 @@ pub module adat_tx #(
         i_rst        : i_rst            ,
         i_frame_data : frame_data       ,
         i_load       : frame_ready      ,
-        i_sample_rate: SAMPLE_RATE      ,
+        i_family     : ADAT_FAMILY      ,
         o_bit        : serial_bit       ,
         o_bit_valid  : serial_bit_valid ,
         o_frame_done : serial_frame_done,

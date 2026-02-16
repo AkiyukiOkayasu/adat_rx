@@ -1,7 +1,7 @@
 /// TXビットシリアライザ
 ///
 /// 256bitフレームをMSB-first（bit 255 → bit 0）でシリアル出力する。
-/// ビットタイミングは`SAMPLE_RATE * 256`に基づく分数補間を使用。
+/// ビットタイミングは`ADAT_FAMILY`に基づいて44.1kHz/48kHzの周期を選択。
 /// 48kHzで約4.07 clk/bit, 44.1kHzで約4.46 clk/bit。
 ///
 /// ## Usage
@@ -20,8 +20,8 @@ module tx_bit_serializer #(
     i_frame_data: input logic<256>,
     /// フレームロード要求
     i_load: input logic,
-    /// サンプルレート (44.1kHz / 48kHz)
-    i_sample_rate: input logic<32>,
+    /// ADATビットレートファミリー (0=F44K1, 1=F48K)
+    i_family: input logic<1>,
     /// シリアルビット出力
     o_bit: output logic,
     /// ビット出力有効ストローブ
@@ -29,6 +29,15 @@ module tx_bit_serializer #(
     /// フレーム送信完了パルス
     o_frame_done: output logic,
 ) {
+    /// ADATビットレートファミリー (ドキュメンテーション用)
+    ///
+    /// 物理ビットレートは2種類のみ:
+    /// - 0 (F44K1): 44.1kHz × 256 = 11,289,600 bps
+    /// - 1 (F48K):  48kHz × 256 = 12,288,000 bps
+    enum AdatFamily: logic {
+        F44K1 = 1'b0,
+        F48K = 1'b1,
+    }
     // ビットレート
     var bit_rate: logic<40>;
     // クロック周波数（演算用拡張幅）
@@ -56,15 +65,14 @@ module tx_bit_serializer #(
     assign o_bit_valid  = r_bit_valid;
     assign o_frame_done = r_frame_done;
 
-    // サンプルレートに応じたビットレート選択
-    // 物理ビットレートはS/MUX時でも変わらない:
-    // - 44.1kHz系 (44.1k, 88.2k, 176.4k): 11,289,600 bps
-    // - 48kHz系 (48k, 96k, 192k): 12,288,000 bps
+    // ADATファミリーに応じたビットレート選択
+    // 物理ビットレートは2種類のみ:
+    // - F44K1 (0): 11,289,600 bps
+    // - F48K (1): 12,288,000 bps
     always_comb {
-        if i_sample_rate == 32'd44_100 || i_sample_rate == 32'd88_200 || i_sample_rate == 32'd176_400 {
+        if i_family == 1'b0 {
             bit_rate = 40'd11_289_600;
         } else {
-            // 48kHz系 (48k, 96k, 192k) およびデフォルト
             bit_rate = 40'd12_288_000;
         }
         clk_freq = CLK_FREQ;
