@@ -1,22 +1,15 @@
-# PROJECT KNOWLEDGE BASE
+# Agent Guidelines
 
-**Generated:** 2026-02-07 16:59 JST
-**Commit:** 971eee8
-**Branch:** main
+<!-- Do not restructure or delete sections. Update individual values in-place when they change. -->
+
+## Core Principles
+
+- **Do NOT maintain backward compatibility** unless explicitly requested. Break things boldly.
+- **Keep this file under 20-30 lines of instructions.** Every line competes for the agent's limited context budget (~150-200 total).
 
 ## OVERVIEW
 
-Veryl RTL ADAT receiver. Decodes TOSLINK ADAT into 8-channel 24-bit PCM with sample-rate detection (48/96/192kHz).
-
-## STRUCTURE
-
-```
-adat_rx/
-├── src/                  # Veryl RTL sources (top + submodules)
-├── target/               # Veryl-generated SystemVerilog output
-├── dependencies/std/     # Vendored/generate stdlib SV
-└── doc/                  # Generated Veryl HTML docs
-```
+Veryl RTL ADAT receiver. Decodes TOSLINK ADAT into 8-channel 24-bit PCM with S/MUX detection.
 
 ## WHERE TO LOOK
 
@@ -33,16 +26,15 @@ adat_rx/
 - Ports: inputs use `i_`, outputs use `o_`, active-low uses `_n`.
 - WaveDrom is embedded in Veryl doc comments with `/// ```wavedrom` blocks.
 - Reset behavior in design is active-high (`i_rst`), but SV testbenches drive active-low reset signals where noted.
+- Follow the existing patterns in the codebase
+- Prefer explicit over clever
+- Delete dead code immediately
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
 - Do not edit generated outputs under `target/` or `doc/` by hand.
 - Do not edit vendored stdlib under `dependencies/std/` directly; regenerate upstream.
 - Do not use GTKWave on macOS; use Surfer for FST traces.
-
-## UNIQUE STYLES
-
-- Integration test uses FST traces (`adat_rx.fst`); unit tests emit VCD by default.
 
 ## COMMANDS
 
