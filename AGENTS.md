@@ -9,15 +9,19 @@
 
 ## OVERVIEW
 
-Veryl RTL ADAT receiver. Decodes TOSLINK ADAT into 8-channel 24-bit PCM with S/MUX detection.
+Veryl RTL ADAT receiver/transmitter. Decodes TOSLINK ADAT into 8-channel 24-bit PCM or encodes PCM into ADAT frames with S/MUX support.
 
 ## WHERE TO LOOK
 
 | Task | Location | Notes |
 | --- | --- | --- |
-| Top module wiring | src/adat_rx.veryl | Instantiates all pipeline modules |
+| RX top module | src/adat_rx.veryl | Instantiates RX pipeline modules |
+| TX top module | src/adat_tx.veryl | Instantiates TX pipeline (frame builder → serializer → NRZI) |
+| TX frame builder | src/tx_frame_builder.veryl | 8ch 24bit + user bits → 256bit ADAT frame |
+| TX bit serializer | src/tx_bit_serializer.veryl | 256bit → serial bit stream with timing |
+| TX NRZI encoder | src/tx_nrzi_encoder.veryl | Bit stream → NRZI line encoding |
 | Shared types/constants | src/adat_pkg.veryl | SampleRate enum + frame timing constants |
-| S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX active detection (UserBit only). Distinguishing S/MUX2 vs S/MUX4 from UserBit is impossible |
+| S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX active detection (UserBit only) |
 | Stdlib SV | dependencies/std/** | Generated std modules (do not edit) |
 
 ## CONVENTIONS
