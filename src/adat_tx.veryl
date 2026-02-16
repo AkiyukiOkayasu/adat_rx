@@ -349,21 +349,42 @@ module tb_adat_tx_48k;
 endmodule
 }}}
 
-#[test(tb_adat_tx_44k)]
+#[test(tb_echo_loopback_88k)]
 embed (inline) sv{{{
 `timescale 1ns / 1ps
 
-module tb_adat_tx_44k;
+module tb_echo_loopback_88k;
   localparam int CLK_FREQ = 50_000_000;
-  localparam int SAMPLE_RATE = 44100;
+  localparam int SAMPLE_RATE = 88200;
+  localparam int CHECK_FRAMES = 11;
 
   logic clk;
   logic rst;
-  logic frame_clk;
-  logic [23:0] channels[0:7];
-  logic [3:0] user_bits;
-  logic adat_out;
+
+  logic frame_clk_tx;
+  logic [23:0] channels_tx[0:7];
+  logic [3:0] user_bits_tx;
+  logic adat_loopback;
+
+  logic frame_clk_rx;
+  logic smux_active_rx;
+  logic [23:0] channels_rx[0:7];
+  logic valid_rx;
+  logic locked_rx;
+
+  logic [23:0] warmup_frame[0:7];
+  logic [23:0] expected_frame[0:7];
+  logic [23:0] edge_values[0:3];
+  logic [3:0] expected_user_bits;
+
   int pass;
+  int i;
+  int lock_frames;
+  int frame_idx;
+  int rx_valid_count;
+  int tx_done_count;
+  bit smux_checked;
+  bit smux_requested;
 
   initial begin
     clk = 1'b0;
@@ -373,224 +394,223 @@ module tb_adat_tx_44k;
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
       .SAMPLE_RATE(SAMPLE_RATE)
-  ) u_dut (
+  ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
-      .i_frame_clk(frame_clk),
-      .i_channels(channels),
-      .i_user_bits(user_bits),
-      .o_adat(adat_out)
+      .i_frame_clk(frame_clk_tx),
+      .i_channels(channels_tx),
+      .i_user_bits(user_bits_tx),
+      .o_adat(adat_loopback)
   );
 
-  function automatic [29:0] encode_24bit(input [23:0] data);
-    begin
-      encode_24bit[29:25] = {data[23:20], 1'b1};
-      encode_24bit[24:20] = {data[19:16], 1'b1};
-      encode_24bit[19:15] = {data[15:12], 1'b1};
-      encode_24bit[14:10] = {data[11:8], 1'b1};
-      encode_24bit[9:5] = {data[7:4], 1'b1};
-      encode_24bit[4:0] = {data[3:0], 1'b1};
-    end
-  endfunction
+  adat_rx_adat_rx u_rx (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_adat(adat_loopback),
+      .o_frame_clk(frame_clk_rx),
+      .o_smux_active(smux_active_rx),
+      .o_channels(channels_rx),
+      .o_valid(valid_rx),
+      .o_locked(locked_rx)
+  );
 
-  function automatic int expected_bit_clocks(input int bit_index, input int sr);
-    longint bit_rate;
-    longint prev_edge;
-    longint next_edge;
-    longint prev_numer;
-    longint next_numer;
-    begin
-      bit_rate = sr * 256;
-      prev_numer = (longint'(bit_index) * longint'(CLK_FREQ)) + (bit_rate / 2);
-      next_numer = (longint'(bit_index + 1) * longint'(CLK_FREQ)) + (bit_rate / 2);
-      prev_edge = prev_numer / bit_rate;
-      next_edge = next_numer / bit_rate;
-      expected_bit_clocks = next_edge - prev_edge;
-    end
-  endfunction
+  always @(posedge valid_rx) begin
+    rx_valid_count = rx_valid_count + 1;
+  end
+
+  always @(posedge u_tx.serial_frame_done) begin
+    tx_done_count = tx_done_count + 1;
+  end
 
   task automatic pulse_frame_clk;
     begin
-      frame_clk = 1'b0;
+      frame_clk_tx = 1'b0;
       @(posedge clk);
-      frame_clk = 1'b1;
+      frame_clk_tx = 1'b1;
       @(posedge clk);
-      frame_clk = 1'b0;
+      frame_clk_tx = 1'b0;
     end
   endtask
 
-  task automatic wait_frame_ready(input string tag);
+  task automatic compare_channels(
+      input string tag,
+      input [23:0] expected[0:7],
+      input [23:0] actual[0:7]
+  );
+    begin
+      for (int ch = 0; ch < 8; ch++) begin
+        if (expected[ch] !== actual[ch]) begin
+          $error("FAIL[%s]: ch%0d mismatch exp=%h got=%h", tag, ch, expected[ch], actual[ch]);
+          pass = 0;
+        end
+      end
+    end
+  endtask
+
+  task automatic wait_for_valid(input string tag, input int prev_valid_count);
     int timeout;
     begin
       timeout = 0;
-      while ((u_dut.frame_ready !== 1'b1) && (timeout < 200)) begin
+      while ((rx_valid_count == prev_valid_count) && (timeout < 20_000)) begin
         @(posedge clk);
         timeout = timeout + 1;
       end
 
-      if (u_dut.frame_ready !== 1'b1) begin
-        $error("FAIL[%s]: frame_ready timeout", tag);
+      if (rx_valid_count == prev_valid_count) begin
+        $error("FAIL[%s]: timeout waiting for valid_rx", tag);
         pass = 0;
+        $finish;
       end
+      #10;
     end
   endtask
 
-  task automatic check_frame_layout(input string tag);
-    reg [255:0] expected;
-    begin
-      expected[255:246] = 10'b0000000000;
-      expected[245] = 1'b1;
-      expected[244:241] = user_bits;
-      expected[240] = 1'b1;
-      expected[239:210] = encode_24bit(channels[0]);
-      expected[209:180] = encode_24bit(channels[1]);
-      expected[179:150] = encode_24bit(channels[2]);
-      expected[149:120] = encode_24bit(channels[3]);
-      expected[119:90] = encode_24bit(channels[4]);
-      expected[89:60] = encode_24bit(channels[5]);
-      expected[59:30] = encode_24bit(channels[6]);
-      expected[29:0] = encode_24bit(channels[7]);
-
-      if (u_dut.frame_data !== expected) begin
-        $error("FAIL[%s]: frame_data mismatch", tag);
-        pass = 0;
-      end
-    end
-  endtask
-
-  task automatic check_serial_stream(input string tag, input int sr, output int line_toggles);
-    int bit_idx;
-    int cycles_since_prev;
+  task automatic wait_for_tx_done(input string tag, input int prev_done_count);
     int timeout;
-    int exp_cycles;
-    logic prev_level;
     begin
-      bit_idx = 0;
-      cycles_since_prev = 0;
       timeout = 0;
-      line_toggles = 0;
-      prev_level = adat_out;
-
-      while ((bit_idx < 256) && (timeout < 7000)) begin
+      while ((tx_done_count == prev_done_count) && (timeout < 20_000)) begin
         @(posedge clk);
         timeout = timeout + 1;
-        cycles_since_prev = cycles_since_prev + 1;
-
-        if (adat_out !== prev_level) begin
-          line_toggles = line_toggles + 1;
-        end
-        prev_level = adat_out;
-
-        if (u_dut.serial_bit_valid) begin
-          exp_cycles = expected_bit_clocks(bit_idx, sr);
-          // frame_builder->serializer間がレジスタ受け渡しのため、先頭ビットのみ+1サイクル
-          if (bit_idx == 0) begin
-            exp_cycles = exp_cycles + 1;
-          end
-          if (cycles_since_prev !== exp_cycles) begin
-            $error("FAIL[%s]: bit timing mismatch bit=%0d expected=%0d got=%0d", tag, bit_idx,
-                   exp_cycles, cycles_since_prev);
-            pass = 0;
-          end
-
-          if (bit_idx == 255) begin
-            if (!u_dut.serial_frame_done) begin
-              $error("FAIL[%s]: frame_done not asserted at final bit", tag);
-              pass = 0;
-            end
-          end else if (u_dut.serial_frame_done) begin
-            $error("FAIL[%s]: frame_done asserted early at bit=%0d", tag, bit_idx);
-            pass = 0;
-          end
-
-          cycles_since_prev = 0;
-          bit_idx = bit_idx + 1;
-        end
       end
 
-      if (bit_idx != 256) begin
-        $error("FAIL[%s]: did not observe 256 valid bits", tag);
+      if (tx_done_count == prev_done_count) begin
+        $error("FAIL[%s]: timeout waiting for TX frame_done", tag);
         pass = 0;
+        $finish;
       end
-
       @(posedge clk);
-      if (u_dut.serial_bit_valid || u_dut.serial_frame_done) begin
-        $error("FAIL[%s]: serializer outputs should deassert after frame", tag);
-        pass = 0;
-      end
-
-      if (line_toggles == 0) begin
-        $error("FAIL[%s]: NRZI output did not toggle", tag);
-        pass = 0;
-      end
     end
   endtask
 
-  task automatic load_pattern0;
+  task automatic load_tx_payload(
+      input [23:0] payload[0:7],
+      input [3:0] user_bits
+  );
     begin
-      user_bits = 4'hA;
-      channels[0] = 24'h123456;
-      channels[1] = 24'h789ABC;
-      channels[2] = 24'hDEF012;
-      channels[3] = 24'h345678;
-      channels[4] = 24'h9ABCDE;
-      channels[5] = 24'hF01234;
-      channels[6] = 24'h567890;
-      channels[7] = 24'hABCDEF;
+      user_bits_tx = user_bits;
+      for (int ch = 0; ch < 8; ch++) begin
+        channels_tx[ch] = payload[ch];
+      end
     end
   endtask
 
-  task automatic load_pattern1;
+  task automatic send_one_frame(
+      input string tag,
+      input [23:0] payload[0:7],
+      input [3:0] user_bits
+  );
+    int valid_before;
+    int done_before;
     begin
-      user_bits = 4'h5;
-      channels[0] = 24'h000000;
-      channels[1] = 24'h111111;
-      channels[2] = 24'h222222;
-      channels[3] = 24'h333333;
-      channels[4] = 24'h444444;
-      channels[5] = 24'h555555;
-      channels[6] = 24'h666666;
-      channels[7] = 24'h777777;
+      valid_before = rx_valid_count;
+      done_before = tx_done_count;
+      load_tx_payload(payload, user_bits);
+      pulse_frame_clk();
+      wait_for_valid(tag, valid_before);
+      wait_for_tx_done(tag, done_before);
     end
   endtask
 
-  int toggles0;
-  int toggles1;
-  int i;
+  task automatic build_expected_frame(
+      input int index,
+      output logic [23:0] payload[0:7],
+      output logic [3:0] user_bits
+  );
+    begin
+      user_bits = 4'b0000;
+
+      case (index)
+        0: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[0];
+        1: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[1];
+        2: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[2];
+        3: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[3];
+        default: begin
+          for (int ch = 0; ch < 8; ch++) begin
+            payload[ch] = edge_values[(index + ch) % 4];
+          end
+        end
+      endcase
+
+      if (index == 6) begin
+        user_bits[1] = 1'b1;
+        user_bits[2] = 1'b1;
+      end
+    end
+  endtask
 
   initial begin
     pass = 1;
     rst = 1'b0;
-    frame_clk = 1'b0;
-    user_bits = 4'd0;
-    toggles0 = 0;
-    toggles1 = 0;
+    frame_clk_tx = 1'b0;
+    user_bits_tx = 4'b0000;
+    smux_checked = 1'b0;
+    smux_requested = 1'b0;
+    lock_frames = 0;
+    rx_valid_count = 0;
+    tx_done_count = 0;
+
+    edge_values[0] = 24'h7FFFFF;
+    edge_values[1] = 24'h800000;
+    edge_values[2] = 24'h000000;
+    edge_values[3] = 24'hFFFFFF;
+
     for (i = 0; i < 8; i++) begin
-      channels[i] = 24'd0;
+      channels_tx[i] = 24'd0;
+      warmup_frame[i] = 24'h13579B;
+      expected_frame[i] = 24'd0;
     end
+    expected_user_bits = 4'b0000;
 
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
 
-    // frame0
-    load_pattern0();
-    pulse_frame_clk();
-    wait_frame_ready("frame0");
-    check_frame_layout("frame0");
-    check_serial_stream("frame0", SAMPLE_RATE, toggles0);
+    while ((locked_rx !== 1'b1) && (lock_frames < 20)) begin
+      send_one_frame("lock", warmup_frame, 4'b0000);
+      lock_frames = lock_frames + 1;
+    end
 
-    // frame1
-    load_pattern1();
-    pulse_frame_clk();
-    wait_frame_ready("frame1");
-    check_frame_layout("frame1");
-    check_serial_stream("frame1", SAMPLE_RATE, toggles1);
+    if (locked_rx !== 1'b1) begin
+      $error("FAIL: RX did not lock within warmup frames");
+      pass = 0;
+      $finish;
+    end
+
+    for (frame_idx = 0; frame_idx < CHECK_FRAMES; frame_idx++) begin
+      build_expected_frame(frame_idx, expected_frame, expected_user_bits);
+      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_user_bits);
+
+      if (locked_rx !== 1'b1) begin
+        $error("FAIL[frame%0d]: RX lost lock", frame_idx);
+        pass = 0;
+      end
+
+      compare_channels($sformatf("frame%0d", frame_idx), expected_frame, channels_rx);
+
+      if (expected_user_bits[2]) begin
+        smux_requested = 1'b1;
+      end
+
+      if (smux_requested && (smux_active_rx === 1'b1)) begin
+        smux_checked = 1'b1;
+      end
+    end
+
+    if (!smux_requested) begin
+      $error("FAIL: UserBit[2] frame was not exercised");
+      pass = 0;
+    end
+
+    if (!smux_checked) begin
+      $error("FAIL: smux_active did not reflect UserBit[2]");
+      pass = 0;
+    end
 
     if (pass) begin
-      $display("*** TEST PASSED ***");
+      $display("*** TEST PASSED (88.2kHz) ***");
     end else begin
-      $error("*** TEST FAILED ***");
+      $error("*** TEST FAILED (88.2kHz) ***");
     end
 
     #20;
@@ -598,6 +618,277 @@ module tb_adat_tx_44k;
   end
 endmodule
 }}}
+
+#[test(tb_echo_loopback_96k)]
+embed (inline) sv{{{
+`timescale 1ns / 1ps
+
+module tb_echo_loopback_96k;
+  localparam int CLK_FREQ = 50_000_000;
+  localparam int SAMPLE_RATE = 96000;
+  localparam int CHECK_FRAMES = 11;
+
+  logic clk;
+  logic rst;
+
+  logic frame_clk_tx;
+  logic [23:0] channels_tx[0:7];
+  logic [3:0] user_bits_tx;
+  logic adat_loopback;
+
+  logic frame_clk_rx;
+  logic smux_active_rx;
+  logic [23:0] channels_rx[0:7];
+  logic valid_rx;
+  logic locked_rx;
+
+  logic [23:0] warmup_frame[0:7];
+  logic [23:0] expected_frame[0:7];
+  logic [23:0] edge_values[0:3];
+  logic [3:0] expected_user_bits;
+
+  int pass;
+  int i;
+  int lock_frames;
+  int frame_idx;
+  int rx_valid_count;
+  int tx_done_count;
+  bit smux_checked;
+  bit smux_requested;
+
+  initial begin
+    clk = 1'b0;
+    forever #10 clk = ~clk;
+  end
+
+  adat_rx_adat_tx #(
+      .CLK_FREQ(CLK_FREQ),
+      .SAMPLE_RATE(SAMPLE_RATE)
+  ) u_tx (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_frame_clk(frame_clk_tx),
+      .i_channels(channels_tx),
+      .i_user_bits(user_bits_tx),
+      .o_adat(adat_loopback)
+  );
+
+  adat_rx_adat_rx u_rx (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_adat(adat_loopback),
+      .o_frame_clk(frame_clk_rx),
+      .o_smux_active(smux_active_rx),
+      .o_channels(channels_rx),
+      .o_valid(valid_rx),
+      .o_locked(locked_rx)
+  );
+
+  always @(posedge valid_rx) begin
+    rx_valid_count = rx_valid_count + 1;
+  end
+
+  always @(posedge u_tx.serial_frame_done) begin
+    tx_done_count = tx_done_count + 1;
+  end
+
+  task automatic pulse_frame_clk;
+    begin
+      frame_clk_tx = 1'b0;
+      @(posedge clk);
+      frame_clk_tx = 1'b1;
+      @(posedge clk);
+      frame_clk_tx = 1'b0;
+    end
+  endtask
+
+  task automatic compare_channels(
+      input string tag,
+      input [23:0] expected[0:7],
+      input [23:0] actual[0:7]
+  );
+    begin
+      for (int ch = 0; ch < 8; ch++) begin
+        if (expected[ch] !== actual[ch]) begin
+          $error("FAIL[%s]: ch%0d mismatch exp=%h got=%h", tag, ch, expected[ch], actual[ch]);
+          pass = 0;
+        end
+      end
+    end
+  endtask
+
+  task automatic wait_for_valid(input string tag, input int prev_valid_count);
+    int timeout;
+    begin
+      timeout = 0;
+      while ((rx_valid_count == prev_valid_count) && (timeout < 20_000)) begin
+        @(posedge clk);
+        timeout = timeout + 1;
+      end
+
+      if (rx_valid_count == prev_valid_count) begin
+        $error("FAIL[%s]: timeout waiting for valid_rx", tag);
+        pass = 0;
+        $finish;
+      end
+      #10;
+    end
+  endtask
+
+  task automatic wait_for_tx_done(input string tag, input int prev_done_count);
+    int timeout;
+    begin
+      timeout = 0;
+      while ((tx_done_count == prev_done_count) && (timeout < 20_000)) begin
+        @(posedge clk);
+        timeout = timeout + 1;
+      end
+
+      if (tx_done_count == prev_done_count) begin
+        $error("FAIL[%s]: timeout waiting for TX frame_done", tag);
+        pass = 0;
+        $finish;
+      end
+      @(posedge clk);
+    end
+  endtask
+
+  task automatic load_tx_payload(
+      input [23:0] payload[0:7],
+      input [3:0] user_bits
+  );
+    begin
+      user_bits_tx = user_bits;
+      for (int ch = 0; ch < 8; ch++) begin
+        channels_tx[ch] = payload[ch];
+      end
+    end
+  endtask
+
+  task automatic send_one_frame(
+      input string tag,
+      input [23:0] payload[0:7],
+      input [3:0] user_bits
+  );
+    int valid_before;
+    int done_before;
+    begin
+      valid_before = rx_valid_count;
+      done_before = tx_done_count;
+      load_tx_payload(payload, user_bits);
+      pulse_frame_clk();
+      wait_for_valid(tag, valid_before);
+      wait_for_tx_done(tag, done_before);
+    end
+  endtask
+
+  task automatic build_expected_frame(
+      input int index,
+      output logic [23:0] payload[0:7],
+      output logic [3:0] user_bits
+  );
+    begin
+      user_bits = 4'b0000;
+
+      case (index)
+        0: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[0];
+        1: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[1];
+        2: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[2];
+        3: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[3];
+        default: begin
+          for (int ch = 0; ch < 8; ch++) begin
+            payload[ch] = edge_values[(index + ch) % 4];
+          end
+        end
+      endcase
+
+      if (index == 6) begin
+        user_bits[1] = 1'b1;
+        user_bits[2] = 1'b1;
+      end
+    end
+  endtask
+
+  initial begin
+    pass = 1;
+    rst = 1'b0;
+    frame_clk_tx = 1'b0;
+    user_bits_tx = 4'b0000;
+    smux_checked = 1'b0;
+    smux_requested = 1'b0;
+    lock_frames = 0;
+    rx_valid_count = 0;
+    tx_done_count = 0;
+
+    edge_values[0] = 24'h7FFFFF;
+    edge_values[1] = 24'h800000;
+    edge_values[2] = 24'h000000;
+    edge_values[3] = 24'hFFFFFF;
+
+    for (i = 0; i < 8; i++) begin
+      channels_tx[i] = 24'd0;
+      warmup_frame[i] = 24'h13579B;
+      expected_frame[i] = 24'd0;
+    end
+    expected_user_bits = 4'b0000;
+
+    repeat (2) @(posedge clk);
+    rst = 1'b1;
+    repeat (2) @(posedge clk);
+
+    while ((locked_rx !== 1'b1) && (lock_frames < 20)) begin
+      send_one_frame("lock", warmup_frame, 4'b0000);
+      lock_frames = lock_frames + 1;
+    end
+
+    if (locked_rx !== 1'b1) begin
+      $error("FAIL: RX did not lock within warmup frames");
+      pass = 0;
+      $finish;
+    end
+
+    for (frame_idx = 0; frame_idx < CHECK_FRAMES; frame_idx++) begin
+      build_expected_frame(frame_idx, expected_frame, expected_user_bits);
+      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_user_bits);
+
+      if (locked_rx !== 1'b1) begin
+        $error("FAIL[frame%0d]: RX lost lock", frame_idx);
+        pass = 0;
+      end
+
+      compare_channels($sformatf("frame%0d", frame_idx), expected_frame, channels_rx);
+
+      if (expected_user_bits[2]) begin
+        smux_requested = 1'b1;
+      end
+
+      if (smux_requested && (smux_active_rx === 1'b1)) begin
+        smux_checked = 1'b1;
+      end
+    end
+
+    if (!smux_requested) begin
+      $error("FAIL: UserBit[2] frame was not exercised");
+      pass = 0;
+    end
+
+    if (!smux_checked) begin
+      $error("FAIL: smux_active did not reflect UserBit[2]");
+      pass = 0;
+    end
+
+    if (pass) begin
+      $display("*** TEST PASSED (96kHz) ***");
+    end else begin
+      $error("*** TEST FAILED (96kHz) ***");
+    end
+
+    #20;
+    $finish;
+  end
+endmodule
+}}}
+
 
 #[test(tb_echo_loopback)]
 embed (inline) sv{{{

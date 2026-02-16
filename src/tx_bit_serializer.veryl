@@ -57,10 +57,14 @@ pub module tx_bit_serializer #(
     assign o_frame_done = r_frame_done;
 
     // サンプルレートに応じたビットレート選択
+    // 物理ビットレートはS/MUX時でも変わらない:
+    // - 44.1kHz系 (44.1k, 88.2k, 176.4k): 11,289,600 bps
+    // - 48kHz系 (48k, 96k, 192k): 12,288,000 bps
     always_comb {
-        if i_sample_rate == 32'd44_100 {
+        if i_sample_rate == 32'd44_100 || i_sample_rate == 32'd88_200 || i_sample_rate == 32'd176_400 {
             bit_rate = 40'd11_289_600;
         } else {
+            // 48kHz系 (48k, 96k, 192k) およびデフォルト
             bit_rate = 40'd12_288_000;
         }
         clk_freq = CLK_FREQ;
