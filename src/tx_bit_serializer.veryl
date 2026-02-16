@@ -8,7 +8,7 @@
 /// 1. `i_load`パルスで`i_frame_data`をロード
 /// 2. 自動でビット出力開始（MSB first）
 /// 3. 256bit完了時に`o_frame_done`パルス
-pub module tx_bit_serializer #(
+module tx_bit_serializer #(
     /// システムクロック周波数 [Hz]
     param CLK_FREQ: u32 = 50_000_000,
 ) (

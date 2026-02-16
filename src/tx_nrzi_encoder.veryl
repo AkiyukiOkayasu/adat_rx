@@ -3,7 +3,7 @@
 /// シリアル入力ビットをNRZI信号へ変換する。
 /// - `i_bit = 1` のとき出力レベルを反転
 /// - `i_bit = 0` のとき出力レベルを維持
-pub module tx_nrzi_encoder (
+module tx_nrzi_encoder (
     /// システムクロック
     i_clk: input clock,
     /// アクティブハイリセット
