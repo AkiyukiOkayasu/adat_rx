@@ -7,10 +7,10 @@ pub package adat_pkg {
     /// 物理ビットレートは2種類のみ:
     /// - F44K1: 44.1kHz × 256 = 11,289,600 bps (44.1kHz / 88.2kHz / 176.4kHz 系)
     /// - F48K:  48kHz × 256 = 12,288,000 bps (48kHz / 96kHz / 192kHz 系)
-    enum AdatFamily: logic {
+    enum AdatFamily {
         /// 44.1kHz系 (11,289,600 bps)
-        F44K1 = 1'b0,
+        F44K1,
         /// 48kHz系 (12,288,000 bps)
-        F48K = 1'b1,
+        F48K,
     }
 }
