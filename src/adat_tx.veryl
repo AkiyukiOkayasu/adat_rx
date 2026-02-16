@@ -889,7 +889,6 @@ module tb_echo_loopback_96k;
 endmodule
 }}}
 
-
 #[test(tb_echo_loopback)]
 embed (inline) sv{{{
 `timescale 1ns / 1ps
