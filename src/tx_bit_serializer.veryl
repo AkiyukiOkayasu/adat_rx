@@ -29,15 +29,6 @@ module tx_bit_serializer #(
     /// フレーム送信完了パルス
     o_frame_done: output logic,
 ) {
-    /// ADATビットレートファミリー (ドキュメンテーション用)
-    ///
-    /// 物理ビットレートは2種類のみ:
-    /// - 0 (F44K1): 44.1kHz × 256 = 11,289,600 bps
-    /// - 1 (F48K):  48kHz × 256 = 12,288,000 bps
-    enum AdatFamily: logic {
-        F44K1 = 1'b0,
-        F48K = 1'b1,
-    }
     // ビットレート
     var bit_rate: logic<40>;
     // クロック周波数（演算用拡張幅）

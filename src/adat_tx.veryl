@@ -1,3 +1,5 @@
+import adat_pkg::AdatFamily;
+
 /// ADAT TXトップモジュール
 ///
 /// 8ch 24bit PCMをADATフレームへ変換し、NRZI信号として出力する。
@@ -28,7 +30,7 @@ pub module adat_tx #(
     /// システムクロック周波数 [Hz]
     param CLK_FREQ: u32 = 50_000_000,
     /// ADATビットレートファミリー (1'b0=F44K1[44.1kHz系], 1'b1=F48K[48kHz系])
-    param ADAT_FAMILY: logic<1> = 1'b1,
+    param ADAT_FAMILY: AdatFamily = AdatFamily::F48K,
 ) (
     /// システムクロック (50MHz)
     i_clk: input clock,
@@ -41,18 +43,8 @@ pub module adat_tx #(
     /// User bits入力（S/MUXフラグ含む）
     i_user_bits: input logic<4>,
     /// ADAT NRZI出力
-     o_adat: output logic,
+    o_adat: output logic,
 ) {
-    /// ADATビットレートファミリー (ドキュメンテーション用)
-    ///
-    /// 物理ビットレートは2種類のみ:
-    /// - 0 (F44K1): 44.1kHz × 256 = 11,289,600 bps
-    /// - 1 (F48K):  48kHz × 256 = 12,288,000 bps
-    enum AdatFamily: logic {
-        F44K1 = 1'b0,
-        F48K = 1'b1,
-    }
-
     var frame_build_pulse: logic     ;
     var frame_data       : logic<256>;
     var frame_ready      : logic     ;
@@ -89,14 +81,14 @@ pub module adat_tx #(
     inst u_serializer: tx_bit_serializer #(
         CLK_FREQ  ,
     ) (
-        i_clk        : i_clk            ,
-        i_rst        : i_rst            ,
-        i_frame_data : frame_data       ,
-        i_load       : frame_ready      ,
-        i_family     : ADAT_FAMILY      ,
-        o_bit        : serial_bit       ,
-        o_bit_valid  : serial_bit_valid ,
-        o_frame_done : serial_frame_done,
+        i_clk       : i_clk            ,
+        i_rst       : i_rst            ,
+        i_frame_data: frame_data       ,
+        i_load      : frame_ready      ,
+        i_family    : ADAT_FAMILY      ,
+        o_bit       : serial_bit       ,
+        o_bit_valid : serial_bit_valid ,
+        o_frame_done: serial_frame_done,
     );
 
     // NRZIエンコード
@@ -132,7 +124,7 @@ module tb_adat_tx_48k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .ADAT_FAMILY(1'b1)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F48K)
   ) u_dut (
       .i_clk(clk),
       .i_rst(rst),
@@ -402,7 +394,7 @@ module tb_echo_loopback_88k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .ADAT_FAMILY(1'b0)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F44K1)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
@@ -671,7 +663,7 @@ module tb_echo_loopback_96k;
 
   adat_rx_adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .ADAT_FAMILY(1'b1)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F48K)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
@@ -903,7 +895,7 @@ embed (inline) sv{{{
 
 module adat_tx #(
     parameter int CLK_FREQ = 50_000_000,
-    parameter logic ADAT_FAMILY = 1'b1
+    parameter adat_rx_adat_pkg::AdatFamily ADAT_FAMILY = adat_rx_adat_pkg::AdatFamily_F48K
 ) (
     input logic i_clk,
     input logic i_rst,
@@ -992,7 +984,7 @@ module tb_echo_loopback;
 
   adat_tx #(
       .CLK_FREQ(CLK_FREQ),
-      .ADAT_FAMILY(1'b1)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F48K)
   ) u_tx (
       .i_clk(clk),
       .i_rst(rst),
