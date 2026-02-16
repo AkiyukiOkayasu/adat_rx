@@ -1,0 +1,270 @@
+/// ADAT TXフレームビルダー
+///
+/// 8ch x 24bit PCMと4bit User nibbleから256bitフレームを構築する。
+/// フレーム構造: [SYNC 11bit][User 5bit][Audio 240bit]
+module tx_frame_builder (
+    /// システムクロック
+    i_clk: input clock,
+    /// アクティブハイリセット
+    i_rst: input reset,
+    /// 8チャンネルPCM入力
+    i_channels: input logic<24> [8],
+    /// User nibble入力
+    i_user_bits: input logic<4>,
+    /// フレーム構築トリガ
+    i_build: input logic,
+    /// 構築済みADATフレーム
+    o_frame: output logic<256>,
+    /// フレーム有効パルス
+    o_ready: output logic,
+) {
+    var r_frame: logic<256>;
+    var r_ready: logic;
+    var build_frame: logic<256>;
+    var ch0_encoded: logic<30>;
+    var ch1_encoded: logic<30>;
+    var ch2_encoded: logic<30>;
+    var ch3_encoded: logic<30>;
+    var ch4_encoded: logic<30>;
+    var ch5_encoded: logic<30>;
+    var ch6_encoded: logic<30>;
+    var ch7_encoded: logic<30>;
+
+    assign o_frame = r_frame;
+    assign o_ready = r_ready;
+
+    always_comb {
+        ch0_encoded = {i_channels[0][23:20], 1'b1, i_channels[0][19:16], 1'b1, i_channels[0][15:12],
+                       1'b1, i_channels[0][11:8], 1'b1, i_channels[0][7:4], 1'b1, i_channels[0][3:0], 1'b1};
+        ch1_encoded = {i_channels[1][23:20], 1'b1, i_channels[1][19:16], 1'b1, i_channels[1][15:12],
+                       1'b1, i_channels[1][11:8], 1'b1, i_channels[1][7:4], 1'b1, i_channels[1][3:0], 1'b1};
+        ch2_encoded = {i_channels[2][23:20], 1'b1, i_channels[2][19:16], 1'b1, i_channels[2][15:12],
+                       1'b1, i_channels[2][11:8], 1'b1, i_channels[2][7:4], 1'b1, i_channels[2][3:0], 1'b1};
+        ch3_encoded = {i_channels[3][23:20], 1'b1, i_channels[3][19:16], 1'b1, i_channels[3][15:12],
+                       1'b1, i_channels[3][11:8], 1'b1, i_channels[3][7:4], 1'b1, i_channels[3][3:0], 1'b1};
+        ch4_encoded = {i_channels[4][23:20], 1'b1, i_channels[4][19:16], 1'b1, i_channels[4][15:12],
+                       1'b1, i_channels[4][11:8], 1'b1, i_channels[4][7:4], 1'b1, i_channels[4][3:0], 1'b1};
+        ch5_encoded = {i_channels[5][23:20], 1'b1, i_channels[5][19:16], 1'b1, i_channels[5][15:12],
+                       1'b1, i_channels[5][11:8], 1'b1, i_channels[5][7:4], 1'b1, i_channels[5][3:0], 1'b1};
+        ch6_encoded = {i_channels[6][23:20], 1'b1, i_channels[6][19:16], 1'b1, i_channels[6][15:12],
+                       1'b1, i_channels[6][11:8], 1'b1, i_channels[6][7:4], 1'b1, i_channels[6][3:0], 1'b1};
+        ch7_encoded = {i_channels[7][23:20], 1'b1, i_channels[7][19:16], 1'b1, i_channels[7][15:12],
+                       1'b1, i_channels[7][11:8], 1'b1, i_channels[7][7:4], 1'b1, i_channels[7][3:0], 1'b1};
+
+        build_frame = 256'd0;
+        build_frame[255:246] = 10'b0000000000;
+        build_frame[245] = 1'b1;
+        build_frame[244:241] = i_user_bits;
+        build_frame[240] = 1'b1;
+        build_frame[239:210] = ch0_encoded;
+        build_frame[209:180] = ch1_encoded;
+        build_frame[179:150] = ch2_encoded;
+        build_frame[149:120] = ch3_encoded;
+        build_frame[119:90] = ch4_encoded;
+        build_frame[89:60] = ch5_encoded;
+        build_frame[59:30] = ch6_encoded;
+        build_frame[29:0] = ch7_encoded;
+    }
+
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            r_frame = 256'd0;
+            r_ready = 1'b0;
+        } else if i_build {
+            r_frame = build_frame;
+            r_ready = 1'b1;
+        } else {
+            r_ready = 1'b0;
+        }
+    }
+}
+
+#[test(tb_tx_frame_builder)]
+embed (inline) sv{{{
+`timescale 1ns / 1ps
+
+module tb_tx_frame_builder;
+  logic clk;
+  logic rst;
+  logic [23:0] channels[0:7];
+  logic [3:0] user_bits;
+  logic build;
+  logic [255:0] frame;
+  logic ready;
+
+  initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+  end
+
+  adat_rx_tx_frame_builder u_dut (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_channels(channels),
+      .i_user_bits(user_bits),
+      .i_build(build),
+      .o_frame(frame),
+      .o_ready(ready)
+  );
+
+  function automatic [29:0] encode_24bit(input [23:0] data);
+    begin
+      encode_24bit[29:25] = {data[23:20], 1'b1};
+      encode_24bit[24:20] = {data[19:16], 1'b1};
+      encode_24bit[19:15] = {data[15:12], 1'b1};
+      encode_24bit[14:10] = {data[11:8], 1'b1};
+      encode_24bit[9:5] = {data[7:4], 1'b1};
+      encode_24bit[4:0] = {data[3:0], 1'b1};
+    end
+  endfunction
+
+  task automatic expect_frame_layout;
+    reg [255:0] expected;
+    begin
+      expected[255:246] = 10'b0000000000;
+      expected[245] = 1'b1;
+      expected[244:241] = user_bits;
+      expected[240] = 1'b1;
+      expected[239:210] = encode_24bit(channels[0]);
+      expected[209:180] = encode_24bit(channels[1]);
+      expected[179:150] = encode_24bit(channels[2]);
+      expected[149:120] = encode_24bit(channels[3]);
+      expected[119:90] = encode_24bit(channels[4]);
+      expected[89:60] = encode_24bit(channels[5]);
+      expected[59:30] = encode_24bit(channels[6]);
+      expected[29:0] = encode_24bit(channels[7]);
+
+      if (!ready) begin
+        $error("FAIL: o_ready should assert on frame build");
+        pass = 0;
+      end
+
+      if (frame[255:246] !== 10'b0000000000 || frame[245] !== 1'b1) begin
+        $error("FAIL: SYNC pattern mismatch");
+        pass = 0;
+      end
+
+      if (frame[244:241] !== user_bits || frame[240] !== 1'b1) begin
+        $error("FAIL: User nibble mismatch expected=%b got=%b", user_bits, frame[244:241]);
+        pass = 0;
+      end
+
+      if (frame[239:210] !== encode_24bit(channels[0])) begin
+        $error("FAIL: CH0 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[209:180] !== encode_24bit(channels[1])) begin
+        $error("FAIL: CH1 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[179:150] !== encode_24bit(channels[2])) begin
+        $error("FAIL: CH2 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[149:120] !== encode_24bit(channels[3])) begin
+        $error("FAIL: CH3 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[119:90] !== encode_24bit(channels[4])) begin
+        $error("FAIL: CH4 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[89:60] !== encode_24bit(channels[5])) begin
+        $error("FAIL: CH5 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[59:30] !== encode_24bit(channels[6])) begin
+        $error("FAIL: CH6 encoding mismatch");
+        pass = 0;
+      end
+      if (frame[29:0] !== encode_24bit(channels[7])) begin
+        $error("FAIL: CH7 encoding mismatch");
+        pass = 0;
+      end
+
+      if (frame !== expected) begin
+        $error("FAIL: complete frame mismatch");
+        pass = 0;
+      end
+    end
+  endtask
+
+  task automatic pulse_build;
+    begin
+      build = 1'b1;
+      @(posedge clk);
+      #1;
+      build = 1'b0;
+      #1;
+    end
+  endtask
+
+  int pass;
+  int i;
+  reg [23:0] edge_values[0:3];
+
+  initial begin
+    pass = 1;
+    rst = 1'b0;
+    build = 1'b0;
+    user_bits = 4'd0;
+    for (i = 0; i < 8; i++) begin
+      channels[i] = 24'd0;
+    end
+
+    edge_values[0] = 24'h000000;
+    edge_values[1] = 24'h7FFFFF;
+    edge_values[2] = 24'h800000;
+    edge_values[3] = 24'hFFFFFF;
+
+    repeat (2) @(posedge clk);
+    rst = 1'b1;
+    repeat (2) @(posedge clk);
+
+    // Test 1: mixed payload + full frame structure
+    user_bits = 4'hA;
+    channels[0] = 24'h000000;
+    channels[1] = 24'h7FFFFF;
+    channels[2] = 24'h800000;
+    channels[3] = 24'hFFFFFF;
+    channels[4] = 24'h123456;
+    channels[5] = 24'hABCDEF;
+    channels[6] = 24'h555555;
+    channels[7] = 24'h0F0F0F;
+    pulse_build();
+    expect_frame_layout();
+
+    // Test 2: edge cases sweep for all channels
+    for (i = 0; i < 4; i++) begin
+      user_bits = i[3:0];
+      channels[0] = edge_values[i];
+      channels[1] = edge_values[i];
+      channels[2] = edge_values[i];
+      channels[3] = edge_values[i];
+      channels[4] = edge_values[i];
+      channels[5] = edge_values[i];
+      channels[6] = edge_values[i];
+      channels[7] = edge_values[i];
+      pulse_build();
+      expect_frame_layout();
+    end
+
+    // ready must be pulse-like (deassert next cycle)
+    @(posedge clk);
+    #1;
+    if (ready) begin
+      $error("FAIL: o_ready should deassert after build pulse");
+      pass = 0;
+    end
+
+    if (pass) begin
+      $display("*** TEST PASSED ***");
+    end else begin
+      $error("*** TEST FAILED ***");
+    end
+
+    #20;
+    $finish;
+  end
+endmodule
+}}}

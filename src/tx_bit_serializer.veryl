@@ -1,0 +1,255 @@
+/// TXビットシリアライザ
+///
+/// 256bit ADATフレームをビットストリームへ変換する。
+/// ビット出力順は MSB-first (bit[255] -> bit[0])。
+module tx_bit_serializer #(
+    /// システムクロック周波数 [Hz]
+    param CLK_FREQ: u32 = 50_000_000,
+) (
+    /// システムクロック (50MHz)
+    i_clk: input clock,
+    /// アクティブハイリセット
+    i_rst: input reset,
+    /// 送信フレームデータ
+    i_frame_data: input logic<256>,
+    /// フレームロード要求
+    i_load: input logic,
+    /// サンプルレート (44.1kHz / 48kHz)
+    i_sample_rate: input logic<32>,
+    /// シリアルビット出力
+    o_bit: output logic,
+    /// ビット出力有効ストローブ
+    o_bit_valid: output logic,
+    /// フレーム送信完了パルス
+    o_frame_done: output logic,
+) {
+    // ビットレート
+    var bit_rate: logic<40>;
+    // クロック周波数（演算用拡張幅）
+    var clk_freq: logic<40>;
+    // フレームデータ保持
+    var frame_data: logic<256>;
+    // 出力ビットカウンタ (0..255)
+    var bit_counter: logic<8>;
+    // ビット内クロックカウンタ
+    var clk_counter: logic<16>;
+    // 現在ビットの目標クロック数
+    var bit_clocks_target: logic<16>;
+    // 丸め付きエッジ位相累積
+    var phase_accum: logic<40>;
+    // 直前ビット境界クロック
+    var edge_clocks: logic<16>;
+    // 送信中フラグ
+    var active: logic;
+    // 出力レジスタ
+    var r_bit       : logic;
+    var r_bit_valid : logic;
+    var r_frame_done: logic;
+
+    assign o_bit        = r_bit;
+    assign o_bit_valid  = r_bit_valid;
+    assign o_frame_done = r_frame_done;
+
+    // サンプルレートに応じたビットレート選択
+    always_comb {
+        if i_sample_rate == 32'd44_100 {
+            bit_rate = 40'd11_289_600;
+        } else {
+            bit_rate = 40'd12_288_000;
+        }
+        clk_freq = CLK_FREQ;
+    }
+
+    always_ff (i_clk, i_rst) {
+        if_reset {
+            frame_data        = 256'd0;
+            bit_counter       = 8'd0;
+            clk_counter       = 16'd0;
+            bit_clocks_target = 16'd1;
+            phase_accum       = 40'd0;
+            edge_clocks       = 16'd0;
+            active            = 1'b0;
+            r_bit             = 1'b0;
+            r_bit_valid       = 1'b0;
+            r_frame_done      = 1'b0;
+        } else {
+            r_bit_valid  = 1'b0;
+            r_frame_done = 1'b0;
+
+            if i_load {
+                // bit_phase_clocks相当の分数補間（整数演算版）
+                let first_phase: logic<40> = (bit_rate >> 1) + clk_freq;
+                let first_edge : logic<16> = first_phase / bit_rate;
+
+                frame_data        = i_frame_data;
+                bit_counter       = 8'd0;
+                clk_counter       = 16'd0;
+                bit_clocks_target = first_edge;
+                phase_accum       = first_phase;
+                edge_clocks       = first_edge;
+                active            = 1'b1;
+            } else if active {
+                if clk_counter >= (bit_clocks_target - 16'd1) {
+                    r_bit       = frame_data[255 - bit_counter];
+                    r_bit_valid = 1'b1;
+                    clk_counter = 16'd0;
+
+                    if bit_counter >= 8'd255 {
+                        active       = 1'b0;
+                        r_frame_done = 1'b1;
+                    } else {
+                        let next_phase: logic<40> = phase_accum + clk_freq;
+                        let next_edge : logic<16> = next_phase / bit_rate;
+
+                        bit_counter       = bit_counter + 8'd1;
+                        phase_accum       = next_phase;
+                        bit_clocks_target = next_edge - edge_clocks;
+                        edge_clocks       = next_edge;
+                    }
+                } else {
+                    clk_counter = clk_counter + 16'd1;
+                }
+            }
+        }
+    }
+}
+
+#[test(tb_tx_bit_serializer)]
+embed (inline) sv{{{
+`timescale 1ns / 1ps
+
+module tb_tx_bit_serializer;
+  localparam int CLK_FREQ = 50_000_000;
+
+  logic clk;
+  logic rst;
+  logic [255:0] frame_data;
+  logic load;
+  logic [31:0] sample_rate;
+  logic bit_out;
+  logic bit_valid;
+  logic frame_done;
+
+  int pass;
+
+  initial begin
+    clk = 1'b0;
+    forever #10 clk = ~clk;
+  end
+
+  adat_rx_tx_bit_serializer u_dut (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_frame_data(frame_data),
+      .i_load(load),
+      .i_sample_rate(sample_rate),
+      .o_bit(bit_out),
+      .o_bit_valid(bit_valid),
+      .o_frame_done(frame_done)
+  );
+
+  function automatic int expected_bit_clocks(input int bit_index, input int sr);
+    longint bit_rate;
+    longint prev_edge;
+    longint next_edge;
+    longint prev_numer;
+    longint next_numer;
+    begin
+      bit_rate = sr * 256;
+      prev_numer = (longint'(bit_index) * longint'(CLK_FREQ)) + (bit_rate / 2);
+      next_numer = (longint'(bit_index + 1) * longint'(CLK_FREQ)) + (bit_rate / 2);
+      prev_edge = prev_numer / bit_rate;
+      next_edge = next_numer / bit_rate;
+      expected_bit_clocks = next_edge - prev_edge;
+    end
+  endfunction
+
+  task automatic run_frame(input [255:0] frame, input int sr, input string tag);
+    int bit_idx;
+    int cycles_since_prev;
+    int timeout;
+    int exp_cycles;
+    begin
+      frame_data = frame;
+      sample_rate = sr;
+      load = 1'b1;
+      @(posedge clk);
+      load = 1'b0;
+
+      bit_idx = 0;
+      cycles_since_prev = 0;
+      timeout = 0;
+
+      while ((bit_idx < 256) && (timeout < 5000)) begin
+        @(posedge clk);
+        timeout = timeout + 1;
+        cycles_since_prev = cycles_since_prev + 1;
+
+        if (bit_valid) begin
+          exp_cycles = expected_bit_clocks(bit_idx, sr);
+          if (cycles_since_prev !== exp_cycles) begin
+            $error("FAIL[%s]: timing bit=%0d expected=%0d got=%0d", tag, bit_idx, exp_cycles,
+                   cycles_since_prev);
+            pass = 0;
+          end
+
+          if (bit_out !== frame[255 - bit_idx]) begin
+            $error("FAIL[%s]: bit order bit=%0d expected=%b got=%b", tag, bit_idx,
+                   frame[255 - bit_idx], bit_out);
+            pass = 0;
+          end
+
+          if (bit_idx == 255) begin
+            if (!frame_done) begin
+              $error("FAIL[%s]: frame_done not asserted on final bit", tag);
+              pass = 0;
+            end
+          end else if (frame_done) begin
+            $error("FAIL[%s]: frame_done asserted early at bit=%0d", tag, bit_idx);
+            pass = 0;
+          end
+
+          cycles_since_prev = 0;
+          bit_idx = bit_idx + 1;
+        end
+      end
+
+      if (bit_idx != 256) begin
+        $error("FAIL[%s]: timeout before 256 bits (got=%0d)", tag, bit_idx);
+        pass = 0;
+      end
+
+      @(posedge clk);
+      if (bit_valid || frame_done) begin
+        $error("FAIL[%s]: outputs should deassert after frame", tag);
+        pass = 0;
+      end
+    end
+  endtask
+
+  initial begin
+    pass = 1;
+    rst = 1'b0;
+    frame_data = 256'd0;
+    load = 1'b0;
+    sample_rate = 32'd48000;
+
+    repeat (2) @(posedge clk);
+    rst = 1'b1;
+    repeat (2) @(posedge clk);
+
+    run_frame({8'hD3, 240'h00, 8'h5A}, 48000, "frame0_48k");
+    run_frame(256'h0123456789ABCDEF00112233445566778899AABBCCDDEEFF13579BDF2468ACE0, 44100,
+              "frame1_44k1");
+
+    if (pass) begin
+      $display("*** TEST PASSED ***");
+    end else begin
+      $error("*** TEST FAILED ***");
+    end
+
+    #20;
+    $finish;
+  end
+endmodule
+}}}

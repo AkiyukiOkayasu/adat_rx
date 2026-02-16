@@ -1,0 +1,140 @@
+/// TX NRZIエンコーダ
+///
+/// シリアル入力ビットをNRZI信号へ変換する。
+/// - `i_bit = 1` のとき出力レベルを反転
+/// - `i_bit = 0` のとき出力レベルを維持
+module tx_nrzi_encoder (
+    /// システムクロック
+    i_clk: input clock,
+    /// アクティブハイリセット
+    i_rst: input logic,
+    /// シリアル入力ビット
+    i_bit: input logic,
+    /// 入力ビット有効
+    i_valid: input logic,
+    /// NRZI出力
+    o_nrzi: output logic,
+) {
+    var nrzi_level: logic;
+
+    assign o_nrzi = nrzi_level;
+
+    always_ff (i_clk) {
+        if i_rst {
+            nrzi_level = 1'b0;
+        } else if i_valid {
+            if i_bit {
+                nrzi_level = ~nrzi_level;
+            }
+        }
+    }
+}
+
+#[test(tb_tx_nrzi_encoder)]
+embed (inline) sv{{{
+`timescale 1ns / 1ps
+
+module tb_tx_nrzi_encoder;
+  logic clk;
+  logic rst;
+  logic bit_in;
+  logic valid;
+  logic nrzi;
+
+  initial begin
+    clk = 1'b0;
+    forever #5 clk = ~clk;
+  end
+
+  adat_rx_tx_nrzi_encoder u_dut (
+      .i_clk(clk),
+      .i_rst(rst),
+      .i_bit(bit_in),
+      .i_valid(valid),
+      .o_nrzi(nrzi)
+  );
+
+  task send_bit(input logic value);
+    begin
+      bit_in = value;
+      valid = 1'b1;
+      @(posedge clk);
+      valid = 1'b0;
+      @(posedge clk);
+    end
+  endtask
+
+  int pass;
+  logic expected_level;
+
+  initial begin
+    pass = 1;
+    rst = 1'b1;
+    bit_in = 1'b0;
+    valid = 1'b0;
+    expected_level = 1'b0;
+
+    repeat (2) @(posedge clk);
+    if (nrzi !== 1'b0) begin
+      $error("FAIL: reset state should be 0, got %b", nrzi);
+      pass = 0;
+    end
+
+    rst = 1'b0;
+    @(posedge clk);
+
+    // 1で反転
+    send_bit(1'b1);
+    expected_level = ~expected_level;
+    if (nrzi !== expected_level) begin
+      $error("FAIL: bit=1 should toggle (expected=%b got=%b)", expected_level, nrzi);
+      pass = 0;
+    end
+
+    // 0で維持
+    send_bit(1'b0);
+    if (nrzi !== expected_level) begin
+      $error("FAIL: bit=0 should hold (expected=%b got=%b)", expected_level, nrzi);
+      pass = 0;
+    end
+
+    // 交互ビット列
+    send_bit(1'b1);
+    expected_level = ~expected_level;
+    if (nrzi !== expected_level) begin
+      $error("FAIL: seq[0] mismatch (expected=%b got=%b)", expected_level, nrzi);
+      pass = 0;
+    end
+
+    send_bit(1'b0);
+    if (nrzi !== expected_level) begin
+      $error("FAIL: seq[1] mismatch (expected=%b got=%b)", expected_level, nrzi);
+      pass = 0;
+    end
+
+    send_bit(1'b1);
+    expected_level = ~expected_level;
+    if (nrzi !== expected_level) begin
+      $error("FAIL: seq[2] mismatch (expected=%b got=%b)", expected_level, nrzi);
+      pass = 0;
+    end
+
+    // 再リセットで初期化
+    rst = 1'b1;
+    @(posedge clk);
+    if (nrzi !== 1'b0) begin
+      $error("FAIL: reset should clear output to 0, got %b", nrzi);
+      pass = 0;
+    end
+
+    if (pass) begin
+      $display("*** TEST PASSED ***");
+    end else begin
+      $error("*** TEST FAILED ***");
+    end
+
+    #20;
+    $finish;
+  end
+endmodule
+}}}
