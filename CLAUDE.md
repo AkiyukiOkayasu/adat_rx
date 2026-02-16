@@ -20,25 +20,23 @@ veryl clean         # Clean generated files
 ## Architecture
 
 ### RX Pipeline
+
 ```
 ADAT input → timing_tracker → bit_decoder → frame_parser → output_interface → PCM output
               (edge detection)  (NRZI/4B5B)  (30bit→24bit)  (word clock gen)
 ```
 
 ### TX Pipeline
+
 ```
 PCM input → tx_frame_builder → tx_bit_serializer → tx_nrzi_encoder → ADAT output
             (256bit frame build) (MSB-first serial)   (NRZI encode)
 ```
 
-### Shared
-- `adat_pkg` — Shared type definitions (`AdatFamily` enum, etc.)
-
 ## Coding Conventions
 
 - Comments in Japanese
 - Port naming: inputs `i_`, outputs `o_`, active-low `_n` suffix
-- Shared types imported as `adat_pkg::*`
 - Reset active-high `i_rst` across all modules
 
 ## Do Not Edit
@@ -46,8 +44,3 @@ PCM input → tx_frame_builder → tx_bit_serializer → tx_nrzi_encoder → ADA
 - `target/` — Generated SystemVerilog
 - `dependencies/std/` — Vendored standard library
 - `doc/` — Generated documentation
-
-## Testing
-
-- Simulator: Verilator / Waveform: FST / Viewer: Surfer
-- View waveforms: `surfer src/<testbench_name>.fst`
