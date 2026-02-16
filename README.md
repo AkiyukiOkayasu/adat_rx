@@ -51,7 +51,9 @@ inst rx: adat_rx (
 
 ### TX (Transmitter)
 ```veryl
-inst tx: adat_tx (
+inst tx: adat_tx #(
+    ADAT_FAMILY: 1'b1,  // 1'b0=F44K1 (44.1kHz系), 1'b1=F48K (48kHz系)
+) (
     i_clk         : clk,
     i_rst         : rst,
     i_frame_clk   : frame_clk_tx,

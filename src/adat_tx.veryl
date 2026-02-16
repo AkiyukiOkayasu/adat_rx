@@ -7,7 +7,7 @@
 ///    - `i_frame_clk`立ち上がりをトリガに256bit ADATフレームを構築
 /// 2. `tx_bit_serializer`
 ///    - 256bitフレームをMSB-firstでシリアル化
-///    - `ADAT_FAMILY`に応じて44.1kHz/48kHzのビット周期を選択
+///    - `ADAT_FAMILY`に応じて44.1kHz系/48kHz系のビット周期を選択
 /// 3. `tx_nrzi_encoder`
 ///    - シリアルビットをNRZIへ変換して`o_adat`へ出力
 ///
@@ -27,7 +27,7 @@
 pub module adat_tx #(
     /// システムクロック周波数 [Hz]
     param CLK_FREQ: u32 = 50_000_000,
-    /// ADATビットレートファミリー (0=F44K1, 1=F48K)
+    /// ADATビットレートファミリー (1'b0=F44K1[44.1kHz系], 1'b1=F48K[48kHz系])
     param ADAT_FAMILY: logic<1> = 1'b1,
 ) (
     /// システムクロック (50MHz)

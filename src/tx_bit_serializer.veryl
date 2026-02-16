@@ -1,8 +1,8 @@
 /// TXビットシリアライザ
 ///
 /// 256bitフレームをMSB-first（bit 255 → bit 0）でシリアル出力する。
-/// ビットタイミングは`ADAT_FAMILY`に基づいて44.1kHz/48kHzの周期を選択。
-/// 48kHzで約4.07 clk/bit, 44.1kHzで約4.46 clk/bit。
+/// ビットタイミングはADATビットレート(family × 256)に基づく分数補間を使用。
+/// 48kHz系で約4.07 clk/bit, 44.1kHz系で約4.46 clk/bit.
 ///
 /// ## Usage
 /// 1. `i_load`パルスで`i_frame_data`をロード
@@ -20,7 +20,7 @@ module tx_bit_serializer #(
     i_frame_data: input logic<256>,
     /// フレームロード要求
     i_load: input logic,
-    /// ADATビットレートファミリー (0=F44K1, 1=F48K)
+    /// ADATビットレートファミリー
     i_family: input logic<1>,
     /// シリアルビット出力
     o_bit: output logic,
