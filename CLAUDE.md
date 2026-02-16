@@ -1,53 +1,53 @@
 # CLAUDE.md
 
-## プロジェクト概要
+## Project Overview
 
-ADAT送受信機のRTL実装。Veryl言語で記述し、Verilatorでシミュレーションする。
+ADAT transceiver RTL implementation in Veryl, simulated with Verilator.
 
-- **RX**: ADAT光入力 → 8ch 24bit PCM出力（クロック自動復元）
-- **TX**: 8ch 24bit PCM入力 → ADAT光出力
+- **RX**: ADAT optical input → 8ch 24bit PCM output (automatic clock recovery)
+- **TX**: 8ch 24bit PCM input → ADAT optical output
 
-## コマンド
+## Commands
 
 ```bash
-veryl fmt           # フォーマット
-veryl build         # Veryl → SystemVerilog生成
-veryl test          # テスト実行
-veryl test --wave   # 波形付きテスト（FST出力）
-veryl clean         # クリーン
+veryl fmt           # Format code
+veryl build         # Generate SystemVerilog from Veryl
+veryl test          # Run tests
+veryl test --wave   # Run tests with waveform output (FST)
+veryl clean         # Clean generated files
 ```
 
-## アーキテクチャ
+## Architecture
 
-### RX パイプライン
+### RX Pipeline
 ```
-ADAT入力 → timing_tracker → bit_decoder → frame_parser → output_interface → PCM出力
-             (エッジ検出)    (NRZI/4B5B)   (30bit→24bit)   (ワードクロック)
-```
-
-### TX パイプライン
-```
-PCM入力 → tx_frame_builder → tx_bit_serializer → tx_nrzi_encoder → ADAT出力
-           (256bitフレーム構築)  (MSB-firstシリアル化)  (NRZI変換)
+ADAT input → timing_tracker → bit_decoder → frame_parser → output_interface → PCM output
+              (edge detection)  (NRZI/4B5B)  (30bit→24bit)  (word clock gen)
 ```
 
-### 共有
-- `adat_pkg` — `AdatFamily` enum等の共有型定義
+### TX Pipeline
+```
+PCM input → tx_frame_builder → tx_bit_serializer → tx_nrzi_encoder → ADAT output
+            (256bit frame build) (MSB-first serial)   (NRZI encode)
+```
 
-## コーディング規約
+### Shared
+- `adat_pkg` — Shared type definitions (`AdatFamily` enum, etc.)
 
-- コメントは日本語
-- ポート命名: 入力`i_`、出力`o_`、アクティブロー`_n`接尾辞
-- 共有型は `adat_pkg::*` をインポート
-- リセットは全モジュールでアクティブハイ `i_rst`
+## Coding Conventions
 
-## 編集禁止
+- Comments in Japanese
+- Port naming: inputs `i_`, outputs `o_`, active-low `_n` suffix
+- Shared types imported as `adat_pkg::*`
+- Reset active-high `i_rst` across all modules
 
-- `target/` — 生成SystemVerilog
-- `dependencies/std/` — vendored標準ライブラリ
-- `doc/` — 生成ドキュメント
+## Do Not Edit
 
-## テスト
+- `target/` — Generated SystemVerilog
+- `dependencies/std/` — Vendored standard library
+- `doc/` — Generated documentation
 
-- シミュレータ: Verilator / 波形: FST / ビューワー: Surfer
-- `surfer src/<テストベンチ名>.fst` で波形表示
+## Testing
+
+- Simulator: Verilator / Waveform: FST / Viewer: Surfer
+- View waveforms: `surfer src/<testbench_name>.fst`
