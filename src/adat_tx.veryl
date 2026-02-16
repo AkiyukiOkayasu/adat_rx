@@ -43,6 +43,16 @@ pub module adat_tx #(
     /// ADAT NRZI出力
     o_adat: output logic,
 ) {
+    /// ADATビットレートファミリー
+    ///
+    /// 物理ビットレートは2種類のみ:
+    /// - F44K1: 44.1kHz × 256 = 11,289,600 bps
+    /// - F48K:  48kHz × 256 = 12,288,000 bps
+    enum AdatFamily: logic {
+        F44K1 = 1'b0,
+        F48K = 1'b1,
+    }
+
     var frame_build_pulse: logic     ;
     var frame_data       : logic<256>;
     var frame_ready      : logic     ;
