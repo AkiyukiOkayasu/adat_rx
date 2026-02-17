@@ -53,7 +53,7 @@ module timing_tracker (
     assign o_frame_time  = frame_time;
 
     // 遷移間時間カウンタと最大時間追跡
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             cur_time   = 12'd0;
             edge_time  = 12'd0;

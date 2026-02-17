@@ -69,7 +69,7 @@ module tx_bit_serializer #(
         clk_freq = CLK_FREQ;
     }
 
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             frame_data        = 256'd0;
             bit_counter       = 8'd0;

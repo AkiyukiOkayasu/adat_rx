@@ -85,7 +85,7 @@ module frame_parser (
         }
     }
 
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             bit_counter = 8'd0;
             shift_reg   = 30'd0;

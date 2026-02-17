@@ -65,7 +65,7 @@ module output_interface (
 
     // ロック検出
     // 数フレーム連続で同期が取れたらロック
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             frame_cnt = 4'd0;
             locked    = 1'b0;
@@ -82,7 +82,7 @@ module output_interface (
 
     // ワードクロック生成
     // フレーム時間の約50%デューティ
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             word_clk_cnt = 12'd0;
             word_clk     = 1'b0;
@@ -100,7 +100,7 @@ module output_interface (
     }
 
     // チャンネルデータ格納
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             channels[0] = 24'd0;
             channels[1] = 24'd0;

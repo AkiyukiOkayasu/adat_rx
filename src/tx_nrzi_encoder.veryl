@@ -19,7 +19,7 @@ module tx_nrzi_encoder (
 
     assign o_nrzi = nrzi_level;
 
-    always_ff (i_clk) {
+    always_ff {
         if_reset {
             nrzi_level = 1'b0;
         } else if i_valid {

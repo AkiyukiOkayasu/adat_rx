@@ -87,7 +87,7 @@ module tx_frame_builder (
         build_frame[29:0]    = ch7_encoded;
     }
 
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             r_frame = 256'd0;
             r_ready = 1'b0;

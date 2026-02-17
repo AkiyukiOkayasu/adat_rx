@@ -49,7 +49,7 @@ module bit_decoder (
     assign o_bit_count = r_count;
     assign o_valid     = r_valid;
 
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             r_bits  = 5'b00000;
             r_count = 3'd0;
