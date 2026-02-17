@@ -9,7 +9,6 @@
 module output_interface (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// フレーム時間
     i_frame_time: input logic<12>,

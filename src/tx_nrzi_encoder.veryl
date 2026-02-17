@@ -6,7 +6,6 @@
 module tx_nrzi_encoder (
     /// システムクロック
     i_clk: input clock,
-    /// リセット
     i_rst: input reset,
     /// シリアル入力ビット
     i_bit: input logic,

@@ -10,7 +10,6 @@
 module tx_frame_builder (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// 8チャンネルPCM入力
     i_channels: input logic<24> [8],

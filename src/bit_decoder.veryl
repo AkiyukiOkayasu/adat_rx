@@ -17,7 +17,6 @@
 module bit_decoder (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// エッジ検出パルス
     i_edge: input logic,

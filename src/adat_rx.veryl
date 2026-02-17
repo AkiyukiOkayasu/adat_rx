@@ -189,7 +189,6 @@
 pub module adat_rx (
     /// システムクロック (50MHz推奨)
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// ADAT入力 (光→電気変換済み)
     i_adat: input logic,

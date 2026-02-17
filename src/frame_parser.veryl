@@ -36,7 +36,6 @@
 module frame_parser (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// デコードされたビット列
     i_bits: input logic<5>,

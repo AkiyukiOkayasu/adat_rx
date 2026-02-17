@@ -34,7 +34,6 @@ pub module adat_tx #(
 ) (
     /// システムクロック (50MHz)
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// 外部フレームクロック立ち上がりで新規フレーム送信開始
     i_frame_clk: input logic,

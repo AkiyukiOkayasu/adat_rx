@@ -15,7 +15,6 @@
 module timing_tracker (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
     i_rst: input reset,
     /// エッジ検出パルス入力
     i_edge: input logic,
@@ -82,7 +81,7 @@ module timing_tracker (
 
     // 同期検出: エッジ間隔が閾値以下ならデータ期間
     // エッジ到来時に判定し、次のエッジまで保持
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             sync_mask = 1'b0;
         } else if i_edge {
@@ -91,7 +90,7 @@ module timing_tracker (
     }
 
     // フレーム時間測定: sync_maskの立ち上がりでキャプチャ
-    always_ff (i_clk, i_rst) {
+    always_ff {
         if_reset {
             sync_ff        = 2'b00;
             frame_count    = 12'd0;
