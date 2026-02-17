@@ -51,6 +51,9 @@ pub module adat_tx #(
     var serial_bit       : logic     ;
     var serial_bit_valid : logic     ;
     var serial_frame_done: logic     ;
+    var nrzi_rst         : logic     ;
+
+    assign nrzi_rst = ~i_rst;
 
     // TimecodeやMIDIなどのユーザーデータは常に0とする
     // - U0: Timecode 常に0
@@ -105,7 +108,7 @@ pub module adat_tx #(
     // NRZIエンコード
     inst u_nrzi_encoder: tx_nrzi_encoder (
         i_clk                    ,
-        i_rst                    ,
+        i_rst  : nrzi_rst        ,
         i_bit  : serial_bit      ,
         i_valid: serial_bit_valid,
         o_nrzi : o_adat          ,
