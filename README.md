@@ -30,7 +30,7 @@ ADAT光入力をデコードして24bit PCMを出力、または24bit PCMをADAT
 - 出力: `o_channels[8]`, `o_valid`, `o_locked`, `o_frame_clk`, `o_smux_active`
 
 ### TX (Transmitter)
-- 入力: `i_clk`（50MHz）, `i_rst`, `i_frame_clk`, `i_channels[8]`, `i_user_bits[4]`
+- 入力: `i_clk`（50MHz）, `i_rst`, `i_frame_clk`, `i_channels[8]`, `i_smux_active`
 - 出力: `o_adat`
 
 ## 使用例
@@ -58,7 +58,7 @@ inst tx: adat_tx #(
     i_rst         : rst,
     i_frame_clk   : frame_clk_tx,
     i_channels    : channels_in,
-    i_user_bits   : user_bits,
+    i_smux_active : smux_active,
     o_adat        : adat_out,
 );
 ```

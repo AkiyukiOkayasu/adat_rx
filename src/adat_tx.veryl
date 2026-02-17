@@ -40,8 +40,8 @@ pub module adat_tx #(
     i_frame_clk: input logic,
     /// 8ch 24bit PCM入力
     i_channels: input logic<24> [8],
-    /// User bits入力（S/MUXフラグ含む）
-    i_user_bits: input logic<4>,
+    /// S/MUX有効フラグ入力
+    i_smux_active: input logic,
     /// ADAT NRZI出力
     o_adat: output logic,
 ) {
@@ -51,9 +51,20 @@ pub module adat_tx #(
     var serial_bit       : logic     ;
     var serial_bit_valid : logic     ;
     var serial_frame_done: logic     ;
-    var nrzi_rst         : logic     ;
 
-    assign nrzi_rst = ~i_rst;
+    // TimecodeやMIDIなどのユーザーデータは常に0とする
+    // - U0: Timecode 常に0
+    // - U1: MIDI     常に0
+    // - U2: S/MUXフラグはi_smux_activeに従う
+    // - U3: reserved 常に0
+    var user_bits: logic<4>;
+    always_comb {
+        if i_smux_active {
+            user_bits = 4'b0010;
+        } else {
+            user_bits = 4'b0000;
+        }
+    }
 
     // フレームクロック立ち上がり検出
     inst u_frame_clk_edge: $std::edge_detector (
@@ -68,10 +79,10 @@ pub module adat_tx #(
 
     // フレーム構築
     inst u_frame_builder: tx_frame_builder (
-        i_clk      : i_clk            ,
-        i_rst      : i_rst            ,
-        i_channels : i_channels       ,
-        i_user_bits: i_user_bits      ,
+        i_clk                         ,
+        i_rst                         ,
+        i_channels                    ,
+        i_user_bits: user_bits        ,
         i_build    : frame_build_pulse,
         o_frame    : frame_data       ,
         o_ready    : frame_ready      ,
@@ -81,8 +92,8 @@ pub module adat_tx #(
     inst u_serializer: tx_bit_serializer #(
         CLK_FREQ  ,
     ) (
-        i_clk       : i_clk            ,
-        i_rst       : i_rst            ,
+        i_clk                          ,
+        i_rst                          ,
         i_frame_data: frame_data       ,
         i_load      : frame_ready      ,
         i_family    : ADAT_FAMILY      ,
@@ -93,8 +104,8 @@ pub module adat_tx #(
 
     // NRZIエンコード
     inst u_nrzi_encoder: tx_nrzi_encoder (
-        i_clk  : i_clk           ,
-        i_rst  : nrzi_rst        ,
+        i_clk                    ,
+        i_rst                    ,
         i_bit  : serial_bit      ,
         i_valid: serial_bit_valid,
         o_nrzi : o_adat          ,
@@ -113,7 +124,7 @@ module tb_adat_tx_48k;
   logic rst;
   logic frame_clk;
   logic [23:0] channels[0:7];
-  logic [3:0] user_bits;
+  logic smux_active;
   logic adat_out;
   int pass;
 
@@ -130,7 +141,7 @@ module tb_adat_tx_48k;
       .i_rst(rst),
       .i_frame_clk(frame_clk),
       .i_channels(channels),
-      .i_user_bits(user_bits),
+      .i_smux_active(smux_active),
       .o_adat(adat_out)
   );
 
@@ -192,7 +203,7 @@ module tb_adat_tx_48k;
     begin
       expected[255:246] = 10'b0000000000;
       expected[245] = 1'b1;
-      expected[244:241] = user_bits;
+      expected[244:241] = smux_active ? 4'b0010 : 4'b0000;
       expected[240] = 1'b1;
       expected[239:210] = encode_24bit(channels[0]);
       expected[209:180] = encode_24bit(channels[1]);
@@ -280,7 +291,7 @@ module tb_adat_tx_48k;
 
   task automatic load_pattern0;
     begin
-      user_bits = 4'hA;
+      smux_active = 1'b1;
       channels[0] = 24'h123456;
       channels[1] = 24'h789ABC;
       channels[2] = 24'hDEF012;
@@ -294,7 +305,7 @@ module tb_adat_tx_48k;
 
   task automatic load_pattern1;
     begin
-      user_bits = 4'h5;
+      smux_active = 1'b0;
       channels[0] = 24'h000000;
       channels[1] = 24'h111111;
       channels[2] = 24'h222222;
@@ -314,7 +325,7 @@ module tb_adat_tx_48k;
     pass = 1;
     rst = 1'b0;
     frame_clk = 1'b0;
-    user_bits = 4'd0;
+    smux_active = 1'b0;
     toggles0 = 0;
     toggles1 = 0;
     for (i = 0; i < 8; i++) begin
@@ -364,7 +375,7 @@ module tb_echo_loopback_88k;
 
   logic frame_clk_tx;
   logic [23:0] channels_tx[0:7];
-  logic [3:0] user_bits_tx;
+  logic smux_active_tx;
   logic adat_loopback;
 
   logic frame_clk_rx;
@@ -376,7 +387,7 @@ module tb_echo_loopback_88k;
   logic [23:0] warmup_frame[0:7];
   logic [23:0] expected_frame[0:7];
   logic [23:0] edge_values[0:3];
-  logic [3:0] expected_user_bits;
+  logic expected_smux_active;
 
   int pass;
   int i;
@@ -400,7 +411,7 @@ module tb_echo_loopback_88k;
       .i_rst(rst),
       .i_frame_clk(frame_clk_tx),
       .i_channels(channels_tx),
-      .i_user_bits(user_bits_tx),
+      .i_smux_active(smux_active_tx),
       .o_adat(adat_loopback)
   );
 
@@ -486,10 +497,10 @@ module tb_echo_loopback_88k;
 
   task automatic load_tx_payload(
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     begin
-      user_bits_tx = user_bits;
+      smux_active_tx = smux_active;
       for (int ch = 0; ch < 8; ch++) begin
         channels_tx[ch] = payload[ch];
       end
@@ -499,14 +510,14 @@ module tb_echo_loopback_88k;
   task automatic send_one_frame(
       input string tag,
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     int valid_before;
     int done_before;
     begin
       valid_before = rx_valid_count;
       done_before = tx_done_count;
-      load_tx_payload(payload, user_bits);
+      load_tx_payload(payload, smux_active);
       pulse_frame_clk();
       wait_for_valid(tag, valid_before);
       wait_for_tx_done(tag, done_before);
@@ -516,10 +527,10 @@ module tb_echo_loopback_88k;
   task automatic build_expected_frame(
       input int index,
       output logic [23:0] payload[0:7],
-      output logic [3:0] user_bits
+      output logic smux_active
   );
     begin
-      user_bits = 4'b0000;
+      smux_active = 1'b0;
 
       case (index)
         0: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[0];
@@ -534,8 +545,7 @@ module tb_echo_loopback_88k;
       endcase
 
       if (index == 6) begin
-        user_bits[1] = 1'b1;
-        user_bits[2] = 1'b1;
+        smux_active = 1'b1;
       end
     end
   endtask
@@ -544,7 +554,7 @@ module tb_echo_loopback_88k;
     pass = 1;
     rst = 1'b0;
     frame_clk_tx = 1'b0;
-    user_bits_tx = 4'b0000;
+    smux_active_tx = 1'b0;
     smux_checked = 1'b0;
     smux_requested = 1'b0;
     lock_frames = 0;
@@ -561,14 +571,14 @@ module tb_echo_loopback_88k;
       warmup_frame[i] = 24'h13579B;
       expected_frame[i] = 24'd0;
     end
-    expected_user_bits = 4'b0000;
+    expected_smux_active = 1'b0;
 
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
 
     while ((locked_rx !== 1'b1) && (lock_frames < 20)) begin
-      send_one_frame("lock", warmup_frame, 4'b0000);
+      send_one_frame("lock", warmup_frame, 1'b0);
       lock_frames = lock_frames + 1;
     end
 
@@ -579,8 +589,8 @@ module tb_echo_loopback_88k;
     end
 
     for (frame_idx = 0; frame_idx < CHECK_FRAMES; frame_idx++) begin
-      build_expected_frame(frame_idx, expected_frame, expected_user_bits);
-      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_user_bits);
+      build_expected_frame(frame_idx, expected_frame, expected_smux_active);
+      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_smux_active);
 
       if (locked_rx !== 1'b1) begin
         $error("FAIL[frame%0d]: RX lost lock", frame_idx);
@@ -589,7 +599,7 @@ module tb_echo_loopback_88k;
 
       compare_channels($sformatf("frame%0d", frame_idx), expected_frame, channels_rx);
 
-      if (expected_user_bits[2]) begin
+      if (expected_smux_active) begin
         smux_requested = 1'b1;
       end
 
@@ -599,12 +609,12 @@ module tb_echo_loopback_88k;
     end
 
     if (!smux_requested) begin
-      $error("FAIL: UserBit[2] frame was not exercised");
+      $error("FAIL: i_smux_active frame was not exercised");
       pass = 0;
     end
 
     if (!smux_checked) begin
-      $error("FAIL: smux_active did not reflect UserBit[2]");
+      $error("FAIL: smux_active did not reflect i_smux_active");
       pass = 0;
     end
 
@@ -633,7 +643,7 @@ module tb_echo_loopback_96k;
 
   logic frame_clk_tx;
   logic [23:0] channels_tx[0:7];
-  logic [3:0] user_bits_tx;
+  logic smux_active_tx;
   logic adat_loopback;
 
   logic frame_clk_rx;
@@ -645,7 +655,7 @@ module tb_echo_loopback_96k;
   logic [23:0] warmup_frame[0:7];
   logic [23:0] expected_frame[0:7];
   logic [23:0] edge_values[0:3];
-  logic [3:0] expected_user_bits;
+  logic expected_smux_active;
 
   int pass;
   int i;
@@ -669,7 +679,7 @@ module tb_echo_loopback_96k;
       .i_rst(rst),
       .i_frame_clk(frame_clk_tx),
       .i_channels(channels_tx),
-      .i_user_bits(user_bits_tx),
+      .i_smux_active(smux_active_tx),
       .o_adat(adat_loopback)
   );
 
@@ -755,10 +765,10 @@ module tb_echo_loopback_96k;
 
   task automatic load_tx_payload(
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     begin
-      user_bits_tx = user_bits;
+      smux_active_tx = smux_active;
       for (int ch = 0; ch < 8; ch++) begin
         channels_tx[ch] = payload[ch];
       end
@@ -768,14 +778,14 @@ module tb_echo_loopback_96k;
   task automatic send_one_frame(
       input string tag,
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     int valid_before;
     int done_before;
     begin
       valid_before = rx_valid_count;
       done_before = tx_done_count;
-      load_tx_payload(payload, user_bits);
+      load_tx_payload(payload, smux_active);
       pulse_frame_clk();
       wait_for_valid(tag, valid_before);
       wait_for_tx_done(tag, done_before);
@@ -785,10 +795,10 @@ module tb_echo_loopback_96k;
   task automatic build_expected_frame(
       input int index,
       output logic [23:0] payload[0:7],
-      output logic [3:0] user_bits
+      output logic smux_active
   );
     begin
-      user_bits = 4'b0000;
+      smux_active = 1'b0;
 
       case (index)
         0: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[0];
@@ -803,8 +813,7 @@ module tb_echo_loopback_96k;
       endcase
 
       if (index == 6) begin
-        user_bits[1] = 1'b1;
-        user_bits[2] = 1'b1;
+        smux_active = 1'b1;
       end
     end
   endtask
@@ -813,7 +822,7 @@ module tb_echo_loopback_96k;
     pass = 1;
     rst = 1'b0;
     frame_clk_tx = 1'b0;
-    user_bits_tx = 4'b0000;
+    smux_active_tx = 1'b0;
     smux_checked = 1'b0;
     smux_requested = 1'b0;
     lock_frames = 0;
@@ -830,14 +839,14 @@ module tb_echo_loopback_96k;
       warmup_frame[i] = 24'h13579B;
       expected_frame[i] = 24'd0;
     end
-    expected_user_bits = 4'b0000;
+    expected_smux_active = 1'b0;
 
     repeat (2) @(posedge clk);
     rst = 1'b1;
     repeat (2) @(posedge clk);
 
     while ((locked_rx !== 1'b1) && (lock_frames < 20)) begin
-      send_one_frame("lock", warmup_frame, 4'b0000);
+      send_one_frame("lock", warmup_frame, 1'b0);
       lock_frames = lock_frames + 1;
     end
 
@@ -848,8 +857,8 @@ module tb_echo_loopback_96k;
     end
 
     for (frame_idx = 0; frame_idx < CHECK_FRAMES; frame_idx++) begin
-      build_expected_frame(frame_idx, expected_frame, expected_user_bits);
-      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_user_bits);
+      build_expected_frame(frame_idx, expected_frame, expected_smux_active);
+      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_smux_active);
 
       if (locked_rx !== 1'b1) begin
         $error("FAIL[frame%0d]: RX lost lock", frame_idx);
@@ -858,7 +867,7 @@ module tb_echo_loopback_96k;
 
       compare_channels($sformatf("frame%0d", frame_idx), expected_frame, channels_rx);
 
-      if (expected_user_bits[2]) begin
+      if (expected_smux_active) begin
         smux_requested = 1'b1;
       end
 
@@ -868,12 +877,12 @@ module tb_echo_loopback_96k;
     end
 
     if (!smux_requested) begin
-      $error("FAIL: UserBit[2] frame was not exercised");
+      $error("FAIL: i_smux_active frame was not exercised");
       pass = 0;
     end
 
     if (!smux_checked) begin
-      $error("FAIL: smux_active did not reflect UserBit[2]");
+      $error("FAIL: smux_active did not reflect i_smux_active");
       pass = 0;
     end
 
@@ -901,7 +910,7 @@ module adat_tx #(
     input logic i_rst,
     input logic i_frame_clk,
     input logic [23:0] i_channels[0:7],
-    input logic [3:0] i_user_bits,
+    input logic i_smux_active,
     output logic o_adat
 );
   logic serial_frame_done;
@@ -914,7 +923,7 @@ module adat_tx #(
       .i_rst(i_rst),
       .i_frame_clk(i_frame_clk),
       .i_channels(i_channels),
-      .i_user_bits(i_user_bits),
+      .i_smux_active(i_smux_active),
       .o_adat(o_adat)
   );
 
@@ -953,7 +962,7 @@ module tb_echo_loopback;
   // TX signals
   logic frame_clk_tx;
   logic [23:0] channels_tx[0:7];
-  logic [3:0] user_bits_tx;
+  logic smux_active_tx;
   logic adat_loopback;
 
   // RX signals
@@ -966,7 +975,7 @@ module tb_echo_loopback;
   logic [23:0] warmup_frame[0:7];
   logic [23:0] expected_frame[0:7];
   logic [23:0] edge_values[0:3];
-  logic [3:0] expected_user_bits;
+  logic expected_smux_active;
 
   int pass;
   int i;
@@ -990,7 +999,7 @@ module tb_echo_loopback;
       .i_rst(rst),
       .i_frame_clk(frame_clk_tx),
       .i_channels(channels_tx),
-      .i_user_bits(user_bits_tx),
+      .i_smux_active(smux_active_tx),
       .o_adat(adat_loopback)
   );
 
@@ -1076,10 +1085,10 @@ module tb_echo_loopback;
 
   task automatic load_tx_payload(
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     begin
-      user_bits_tx = user_bits;
+      smux_active_tx = smux_active;
       for (int ch = 0; ch < 8; ch++) begin
         channels_tx[ch] = payload[ch];
       end
@@ -1089,14 +1098,14 @@ module tb_echo_loopback;
   task automatic send_one_frame(
       input string tag,
       input [23:0] payload[0:7],
-      input [3:0] user_bits
+      input logic smux_active
   );
     int valid_before;
     int done_before;
     begin
       valid_before = rx_valid_count;
       done_before = tx_done_count;
-      load_tx_payload(payload, user_bits);
+      load_tx_payload(payload, smux_active);
       pulse_frame_clk();
       wait_for_valid(tag, valid_before);
       wait_for_tx_done(tag, done_before);
@@ -1106,10 +1115,10 @@ module tb_echo_loopback;
   task automatic build_expected_frame(
       input int index,
       output logic [23:0] payload[0:7],
-      output logic [3:0] user_bits
+      output logic smux_active
   );
     begin
-      user_bits = 4'b0000;
+      smux_active = 1'b0;
 
       case (index)
         0: for (int ch = 0; ch < 8; ch++) payload[ch] = edge_values[0];
@@ -1124,8 +1133,7 @@ module tb_echo_loopback;
       endcase
 
       if (index == 6) begin
-        user_bits[1] = 1'b1;
-        user_bits[2] = 1'b1;
+        smux_active = 1'b1;
       end
     end
   endtask
@@ -1134,7 +1142,7 @@ module tb_echo_loopback;
     pass = 1;
     rst = 1'b0;
     frame_clk_tx = 1'b0;
-    user_bits_tx = 4'b0000;
+    smux_active_tx = 1'b0;
     smux_checked = 1'b0;
     smux_requested = 1'b0;
     lock_frames = 0;
@@ -1151,7 +1159,7 @@ module tb_echo_loopback;
       warmup_frame[i] = 24'h13579B;
       expected_frame[i] = 24'd0;
     end
-    expected_user_bits = 4'b0000;
+    expected_smux_active = 1'b0;
 
     repeat (2) @(posedge clk);
     rst = 1'b1;
@@ -1159,7 +1167,7 @@ module tb_echo_loopback;
 
     // lock確立までウォームアップフレームを送信
     while ((locked_rx !== 1'b1) && (lock_frames < 20)) begin
-      send_one_frame("lock", warmup_frame, 4'b0000);
+      send_one_frame("lock", warmup_frame, 1'b0);
       lock_frames = lock_frames + 1;
     end
 
@@ -1171,8 +1179,8 @@ module tb_echo_loopback;
 
     // 11フレーム連続でTX入力とRX出力の一致を確認
     for (frame_idx = 0; frame_idx < CHECK_FRAMES; frame_idx++) begin
-      build_expected_frame(frame_idx, expected_frame, expected_user_bits);
-      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_user_bits);
+      build_expected_frame(frame_idx, expected_frame, expected_smux_active);
+      send_one_frame($sformatf("frame%0d", frame_idx), expected_frame, expected_smux_active);
 
       if (locked_rx !== 1'b1) begin
         $error("FAIL[frame%0d]: RX lost lock", frame_idx);
@@ -1181,7 +1189,7 @@ module tb_echo_loopback;
 
       compare_channels($sformatf("frame%0d", frame_idx), expected_frame, channels_rx);
 
-      if (expected_user_bits[2]) begin
+      if (expected_smux_active) begin
         smux_requested = 1'b1;
       end
 
@@ -1191,12 +1199,12 @@ module tb_echo_loopback;
     end
 
     if (!smux_requested) begin
-      $error("FAIL: UserBit[2] frame was not exercised");
+      $error("FAIL: i_smux_active frame was not exercised");
       pass = 0;
     end
 
     if (!smux_checked) begin
-      $error("FAIL: smux_active did not reflect UserBit[2]");
+      $error("FAIL: smux_active did not reflect i_smux_active");
       pass = 0;
     end
 

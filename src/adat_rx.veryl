@@ -368,7 +368,7 @@ module adat_tx_compat #(
         .i_rst(rst),
         .i_frame_clk(frame_clk),
         .i_channels(audio_in),
-        .i_user_bits(user_in),
+        .i_smux_active(user_in[1]),
         .o_adat(adat_out)
     );
 
