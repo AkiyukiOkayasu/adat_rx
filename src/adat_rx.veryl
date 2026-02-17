@@ -312,11 +312,11 @@ pub module adat_rx (
 embed (inline) sv{{{
 `timescale 1ns / 1ps
 
-// ADATジェネレータモジュール定義
-module adat_generator #(
+// adat_tx互換ラッパー（adat_generatorの代替）
+// start(ホールド) → frame_clk(パルス生成)変換を行う
+module adat_tx_compat #(
     parameter int CLK_FREQ = 50_000_000,
-    parameter int SAMPLE_RATE = 48000,
-    parameter int SMUX2_MODE = 0
+    parameter adat_rx_adat_pkg::AdatFamily ADAT_FAMILY = adat_rx_adat_pkg::AdatFamily_F48K
 ) (
     input  logic        clk,
     input  logic        rst_n,
@@ -326,134 +326,53 @@ module adat_generator #(
     output logic        adat_out,
     output logic        frame_done
 );
-    localparam int  BIT_RATE = SAMPLE_RATE * 256;
-    localparam int  CLOCKS_PER_BIT_INT = CLK_FREQ / BIT_RATE;
-    localparam real CLOCKS_PER_BIT_REAL = (1.0 * CLK_FREQ) / BIT_RATE;
-    localparam int  CLOCKS_PER_BIT_INIT = $rtoi(CLOCKS_PER_BIT_REAL + 0.5);
-    
-    typedef enum logic [2:0] {
-        IDLE,
-        SYNC,
-        USER_PRE,
-        USER_DATA,
-        USER_POST,
-        CHANNEL
-    } state_t;
-    
-    state_t state, next_state;
-    
-    logic [7:0]  bit_counter;
-    logic [7:0]  clk_counter;
-    logic [7:0]  bit_clocks_target;
-    logic [11:0] bit_edge_clocks;
-    logic [4:0]  nibble_counter;
-    logic [2:0]  channel_counter;
-    real         bit_phase_clocks;
-    
-    logic [255:0] frame_data;
-    logic [29:0]  channel_encoded;
-    logic         current_bit;
-    logic         nrzi_level;
-    
-    function automatic logic [29:0] encode_24bit(input logic [23:0] data);
-        logic [29:0] encoded;
-        encoded[29:25] = {data[23:20], 1'b1};
-        encoded[24:20] = {data[19:16], 1'b1};
-        encoded[19:15] = {data[15:12], 1'b1};
-        encoded[14:10] = {data[11:8],  1'b1};
-        encoded[9:5]   = {data[7:4],   1'b1};
-        encoded[4:0]   = {data[3:0],   1'b1};
-        return encoded;
-    endfunction
-    
-    logic [255:0] build_frame;
-    logic [3:0] effective_user_in;
-    
-    always_comb begin
-        effective_user_in = user_in;
-        if ((SAMPLE_RATE == 44100) && (SMUX2_MODE == 0)) begin
-            effective_user_in = {user_in[3], user_in[0], user_in[1], user_in[2]};
-        end
-        if (SMUX2_MODE == 1) begin
-            effective_user_in[1] = 1'b1;
-        end
-    end
-    
-    always_comb begin
-        build_frame[255:246] = 10'b0000000000;
-        build_frame[245] = 1'b1;
-        build_frame[244:241] = effective_user_in;
-        build_frame[240] = 1'b1;
-        build_frame[239:210] = encode_24bit(audio_in[0]);
-        build_frame[209:180] = encode_24bit(audio_in[1]);
-        build_frame[179:150] = encode_24bit(audio_in[2]);
-        build_frame[149:120] = encode_24bit(audio_in[3]);
-        build_frame[119:90]  = encode_24bit(audio_in[4]);
-        build_frame[89:60]   = encode_24bit(audio_in[5]);
-        build_frame[59:30]   = encode_24bit(audio_in[6]);
-        build_frame[29:0]    = encode_24bit(audio_in[7]);
-    end
-    
-    assign current_bit = frame_data[255 - bit_counter];
-    
+    logic rst;
+    assign rst = rst_n;
+
+    // frame_clkパルス生成: startの立ち上がりで初回、以降frame_done毎に再トリガ
+    logic frame_clk;
+    logic start_prev;
+    logic serial_frame_done;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state <= IDLE;
-            bit_counter <= 8'd0;
-            clk_counter <= 8'd0;
-            bit_clocks_target <= CLOCKS_PER_BIT_INIT;
-            bit_edge_clocks <= CLOCKS_PER_BIT_INIT;
-            bit_phase_clocks <= CLOCKS_PER_BIT_REAL;
-            frame_data <= 256'd0;
-            nrzi_level <= 1'b0;
+            frame_clk <= 1'b0;
+            start_prev <= 1'b0;
             frame_done <= 1'b0;
         end else begin
             frame_done <= 1'b0;
-            
-            case (state)
-                IDLE: begin
-                    if (start) begin
-                        state <= SYNC;
-                        frame_data <= build_frame;
-                        bit_counter <= 8'd0;
-                        clk_counter <= 8'd0;
-                        bit_clocks_target <= CLOCKS_PER_BIT_INIT;
-                        bit_edge_clocks <= CLOCKS_PER_BIT_INIT;
-                        bit_phase_clocks <= CLOCKS_PER_BIT_REAL;
-                    end
+            frame_clk <= 1'b0;
+
+            // startの立ち上がりエッジで最初のフレーム開始
+            if (start && !start_prev) begin
+                frame_clk <= 1'b1;
+            end
+
+            // serial_frame_done時にstart保持中なら次フレーム開始
+            if (serial_frame_done) begin
+                frame_done <= 1'b1;
+                if (start) begin
+                    frame_clk <= 1'b1;
                 end
-                
-                SYNC: begin
-                    if (clk_counter >= bit_clocks_target - 1) begin
-                        clk_counter <= 8'd0;
-                        if (current_bit) begin
-                            nrzi_level <= ~nrzi_level;
-                        end
-                        
-                        if (bit_counter >= 8'd255) begin
-                            state <= IDLE;
-                            frame_done <= 1'b1;
-                        end else begin
-                            int next_edge_clocks;
-                            real next_phase_clocks;
-                            bit_counter <= bit_counter + 8'd1;
-                            next_phase_clocks = bit_phase_clocks + CLOCKS_PER_BIT_REAL;
-                            next_edge_clocks = $rtoi(next_phase_clocks + 0.5);
-                            bit_phase_clocks <= next_phase_clocks;
-                            bit_clocks_target <= next_edge_clocks - bit_edge_clocks;
-                            bit_edge_clocks <= next_edge_clocks;
-                        end
-                    end else begin
-                        clk_counter <= clk_counter + 8'd1;
-                    end
-                end
-                
-                default: state <= IDLE;
-            endcase
+            end
+
+            start_prev <= start;
         end
     end
-    
-    assign adat_out = nrzi_level;
+
+    adat_rx_adat_tx #(
+        .CLK_FREQ(CLK_FREQ),
+        .ADAT_FAMILY(ADAT_FAMILY)
+    ) u_tx (
+        .i_clk(clk),
+        .i_rst(rst),
+        .i_frame_clk(frame_clk),
+        .i_channels(audio_in),
+        .i_user_bits(user_in),
+        .o_adat(adat_out)
+    );
+
+    assign serial_frame_done = u_tx.serial_frame_done;
 endmodule
 
 module tb_adat_rx;
@@ -481,11 +400,10 @@ module tb_adat_rx;
     forever #10 clk = ~clk;
   end
 
-  // ADATジェネレータ (通常モード)
-  adat_generator #(
+  // ADAT TX (通常モード 48kHz)
+  adat_tx_compat #(
       .CLK_FREQ(50_000_000),
-      .SAMPLE_RATE(48000),
-      .SMUX2_MODE(0)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F48K)
   ) u_gen (
       .clk(clk),
       .rst_n(rst),
@@ -496,17 +414,16 @@ module tb_adat_rx;
       .frame_done(gen_done)
   );
 
-  // ADATジェネレータ (44.1kHzモード用)
+  // ADAT TX (44.1kHzモード用)
   logic        adat_in_44k;
   logic        gen_done_44k;
   logic        gen_start_44k;
   logic [23:0] test_audio_44k[0:7];
   logic [ 3:0] test_user_44k;
 
-  adat_generator #(
+  adat_tx_compat #(
       .CLK_FREQ(50_000_000),
-      .SAMPLE_RATE(44100),
-      .SMUX2_MODE(0)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F44K1)
   ) u_gen_44k (
       .clk(clk),
       .rst_n(rst),
@@ -517,17 +434,16 @@ module tb_adat_rx;
       .frame_done(gen_done_44k)
   );
 
-  // ADATジェネレータ (S/MUX2モード用 - 96kHz)
+  // ADAT TX (S/MUX2モード用 - 96kHz)
   logic        adat_in_smux2;
   logic        gen_done_smux2;
   logic        gen_start_smux2;
   logic [23:0] test_audio_smux2[0:7];
   logic [ 3:0] test_user_smux2;
 
-  adat_generator #(
+  adat_tx_compat #(
       .CLK_FREQ(50_000_000),
-      .SAMPLE_RATE(48000),
-      .SMUX2_MODE(1)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F48K)
   ) u_gen_smux2 (
       .clk(clk),
       .rst_n(rst),
@@ -538,17 +454,16 @@ module tb_adat_rx;
       .frame_done(gen_done_smux2)
   );
 
-  // ADATジェネレータ (S/MUX2モード用 - 88.2kHz)
+  // ADAT TX (S/MUX2モード用 - 88.2kHz)
   logic        adat_in_smux2_88k;
   logic        gen_done_smux2_88k;
   logic        gen_start_smux2_88k;
   logic [23:0] test_audio_smux2_88k[0:7];
   logic [ 3:0] test_user_smux2_88k;
 
-  adat_generator #(
+  adat_tx_compat #(
       .CLK_FREQ(50_000_000),
-      .SAMPLE_RATE(44100),
-      .SMUX2_MODE(1)
+      .ADAT_FAMILY(adat_rx_adat_pkg::AdatFamily_F44K1)
   ) u_gen_smux2_88k (
       .clk(clk),
       .rst_n(rst),
@@ -784,7 +699,7 @@ module tb_adat_rx;
     $display("Clock: 50MHz, Sample Rate: 44.1kHz");
 
     // テストデータ設定
-    test_user_44k = 4'hB;
+    test_user_44k = 4'hE;  // 旧generatorの44.1kHz並び替え後の値: {B[3],B[0],B[1],B[2]}={1,1,1,0}
     test_audio_44k[0] = 24'h441100;
     test_audio_44k[1] = 24'h441111;
     test_audio_44k[2] = 24'h441122;
@@ -840,7 +755,7 @@ module tb_adat_rx;
     $display("\n=== S/MUX2 Test (96kHz 4ch mode) ===");
 
     // テストデータ設定 (8チャンネル分のデータを用意)
-    test_user_smux2 = 4'b0000;  // user_in[2]は自動的に1になる
+    test_user_smux2 = 4'b0010;  // user_bits[1]=1でS/MUX有効
     test_audio_smux2[0] = 24'hAA0000;
     test_audio_smux2[1] = 24'hAA1111;
     test_audio_smux2[2] = 24'hBB0000;
@@ -881,7 +796,7 @@ module tb_adat_rx;
     $display("\n=== 88.2kHz S/MUX2 Test (88.2kHz 4ch mode) ===");
 
     // テストデータ設定 (8チャンネル分のデータを用意)
-    test_user_smux2_88k = 4'b0000;  // user_in[2]は自動的に1になる
+    test_user_smux2_88k = 4'b0010;  // user_bits[1]=1でS/MUX有効
     test_audio_smux2_88k[0] = 24'h882000;
     test_audio_smux2_88k[1] = 24'h882111;
     test_audio_smux2_88k[2] = 24'h882200;
