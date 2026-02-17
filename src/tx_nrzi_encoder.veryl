@@ -6,8 +6,8 @@
 module tx_nrzi_encoder (
     /// システムクロック
     i_clk: input clock,
-    /// アクティブハイリセット
-    i_rst: input logic,
+    /// リセット
+    i_rst: input reset,
     /// シリアル入力ビット
     i_bit: input logic,
     /// 入力ビット有効
@@ -20,7 +20,7 @@ module tx_nrzi_encoder (
     assign o_nrzi = nrzi_level;
 
     always_ff (i_clk) {
-        if i_rst {
+        if_reset {
             nrzi_level = 1'b0;
         } else if i_valid {
             if i_bit {
@@ -69,7 +69,7 @@ module tb_tx_nrzi_encoder;
 
   initial begin
     pass = 1;
-    rst = 1'b1;
+    rst = 1'b0;
     bit_in = 1'b0;
     valid = 1'b0;
     expected_level = 1'b0;
@@ -80,7 +80,7 @@ module tb_tx_nrzi_encoder;
       pass = 0;
     end
 
-    rst = 1'b0;
+    rst = 1'b1;
     @(posedge clk);
 
     // 1で反転
@@ -120,12 +120,13 @@ module tb_tx_nrzi_encoder;
     end
 
     // 再リセットで初期化
-    rst = 1'b1;
+    rst = 1'b0;
     @(posedge clk);
     if (nrzi !== 1'b0) begin
       $error("FAIL: reset should clear output to 0, got %b", nrzi);
       pass = 0;
     end
+    rst = 1'b1;
 
     if (pass) begin
       $display("*** TEST PASSED ***");
