@@ -26,16 +26,19 @@ ADAT光入力をデコードして24bit PCMを出力、または24bit PCMをADAT
 ## I/O要点
 
 ### RX (Receiver)
+
 - 入力: `i_clk`（推奨50MHz）, `i_rst`, `i_adat`
 - 出力: `o_channels[8]`, `o_valid`, `o_locked`, `o_frame_clk`, `o_smux_active`
 
 ### TX (Transmitter)
+
 - 入力: `i_clk`（50MHz）, `i_rst`, `i_frame_clk`, `i_channels[8]`, `i_smux_active`
 - 出力: `o_adat`
 
 ## 使用例
 
 ### RX (Receiver)
+
 ```veryl
 inst rx: adat_rx (
     i_clk         : clk,
@@ -50,9 +53,11 @@ inst rx: adat_rx (
 ```
 
 ### TX (Transmitter)
+
 ```veryl
+import adat_pkg::AdatFamily;
 inst tx: adat_tx #(
-    ADAT_FAMILY: 1'b1,  // 1'b0=F44K1 (44.1kHz系), 1'b1=F48K (48kHz系)
+    ADAT_FAMILY: AdatFamily::F48K
 ) (
     i_clk         : clk,
     i_rst         : rst,

@@ -1,3 +1,5 @@
+import adat_pkg::AdatFamily;
+
 /// TXビットシリアライザ
 ///
 /// 256bitフレームをMSB-first（bit 255 → bit 0）でシリアル出力する。
@@ -20,7 +22,7 @@ module tx_bit_serializer #(
     /// フレームロード要求
     i_load: input logic,
     /// ADATビットレートファミリー
-    i_family: input logic<1>,
+    i_family: input AdatFamily,
     /// シリアルビット出力
     o_bit: output logic,
     /// ビット出力有効ストローブ
@@ -60,7 +62,7 @@ module tx_bit_serializer #(
     // - F44K1 (0): 11,289,600 bps
     // - F48K (1): 12,288,000 bps
     always_comb {
-        if i_family == 1'b0 {
+        if i_family == AdatFamily::F44K1 {
             bit_rate = 40'd11_289_600;
         } else {
             bit_rate = 40'd12_288_000;
