@@ -311,7 +311,7 @@ pub module adat_rx (
 embed (inline) sv{{{
 `timescale 1ns / 1ps
 
-// adat_tx互換ラッパー（adat_generatorの代替）
+// adat_tx互換ラッパー（旧TXラッパーの代替）
 // start(ホールド) → frame_clk(パルス生成)変換を行う
 module adat_tx_compat #(
     parameter int CLK_FREQ = 50_000_000,
