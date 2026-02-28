@@ -693,6 +693,30 @@ module tb_adat_rx;
     $display("Frames sent: %0d", frame_count);
     $display("*** TEST SECTION DONE ***");
 
+    // ==================== Dropout / Relock TEST ====================
+    $display("\n=== Dropout Test (unlock -> relock) ===");
+
+    // Stop generator (hold line level) and wait for lock to clear
+    gen_start = 0;
+    repeat (10000) @(posedge clk);
+    if (locked) begin
+      $error("FAIL: Receiver did not unlock after dropout");
+      $finish;
+    end else begin
+      $display("PASS: Receiver unlocked after dropout");
+    end
+
+    // Resume frames and wait for lock to reassert
+    gen_start = 1;
+    send_frames(10, gen_done, "relock");
+    #100;
+    if (!locked) begin
+      $error("FAIL: Receiver did not relock after dropout");
+      $finish;
+    end else begin
+      $display("PASS: Receiver relocked after dropout");
+    end
+
     // ==================== 44.1kHz TEST ====================
     $display("\n=== 44.1kHz Test ===");
     $display("Clock: 50MHz, Sample Rate: 44.1kHz");
