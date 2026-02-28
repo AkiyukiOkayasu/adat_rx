@@ -29,7 +29,6 @@ Veryl RTL ADAT receiver/transmitter. Decodes TOSLINK ADAT into 8-channel 24-bit 
 - Doc comments and implementation comments are Japanese; identifiers/ports are English.
 - Ports: inputs use `i_`, outputs use `o_`, active-low uses `_n`.
 - WaveDrom is embedded in Veryl doc comments with `/// ```wavedrom` blocks.
-- Reset behavior in design is active-high (`i_rst`), but SV testbenches drive active-low reset signals where noted.
 - Follow the existing patterns in the codebase
 - Prefer explicit over clever
 - Delete dead code immediately

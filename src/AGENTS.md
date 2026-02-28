@@ -23,7 +23,6 @@ Veryl RTL sources for the ADAT receiver pipeline and shared package definitions.
 ## CONVENTIONS
 
 - Import `adat_pkg::*` at file top when using shared types/constants.
-- Reset input is active-high `i_rst` across modules.
 - Doc comments are Japanese, identifiers are English.
 - WaveDrom blocks live inside Veryl doc comments (`/// ```wavedrom`).
 

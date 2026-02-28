@@ -37,7 +37,6 @@ PCM input → tx_frame_builder → tx_bit_serializer → tx_nrzi_encoder → ADA
 
 - Comments in Japanese
 - Port naming: inputs `i_`, outputs `o_`, active-low `_n` suffix
-- Reset active-high `i_rst` across all modules
 
 ## Do Not Edit
 
