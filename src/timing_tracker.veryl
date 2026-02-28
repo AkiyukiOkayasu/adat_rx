@@ -170,6 +170,13 @@ embed (inline) sv{{{
                 pass = 0;
             end
 
+            // Negative test: recover after a long gap (must not wedge)
+            pulse_edge(4);
+            if (sync_detect !== 1'b1) begin
+                $error("FAIL: sync_detect should recover to 1 after long interval");
+                pass = 0;
+            end
+
             if (pass) begin
                 $display("*** TEST PASSED ***");
             end else begin
