@@ -29,6 +29,9 @@ ADAT光入力をデコードして24bit PCMを出力、または24bit PCMをADAT
 
 - 入力: `i_clk`（推奨50MHz）, `i_rst`, `i_adat`
 - 出力: `o_channels[8]`, `o_valid`, `o_locked`, `o_frame_clk`, `o_smux_active`
+- `o_valid`: 1フレーム分のPCMが揃ったタイミングで1サイクルだけアサート（`o_channels[8]`更新の目印）
+- `o_locked`: 有効なフレーム受信が継続していると判断できたときにアサート（同期の安定度の目安）
+- `o_locked` はフレーム受信が途切れると解除されます（目安: complete-frame未観測が約2フレーム分続く）
 
 ### TX (Transmitter)
 

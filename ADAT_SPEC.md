@@ -109,3 +109,4 @@ ADATの「フレーム周期」はベースレート（44.1k/48k系）で進み�
 - S/MUX有効検出（User Bit 2）: `src/output_interface.veryl`
 - 同期/フレーム時間追跡: `src/timing_tracker.veryl`
 - 5bitニブルから24bit復元: `src/bit_decoder.veryl`, `src/frame_parser.veryl`
+- `o_valid`/`o_locked` の意味: `src/output_interface.veryl`
