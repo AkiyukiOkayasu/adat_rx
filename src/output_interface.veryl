@@ -6,6 +6,15 @@
 /// ADATフレーム周期のクロック（サンプルクロックではない）
 /// 通常は44.1/48kHz、S/MUX有効時のサンプルレートはこの2倍または4倍
 /// フレーム周期の約50%デューティで出力
+///
+/// # o_valid
+/// `i_data_valid && i_channel==7` のとき、`o_valid` を1サイクルだけアサートする。
+/// これは1フレーム分のPCM（`o_channels[0..7]`）が更新されたことを示す。
+///
+/// # o_locked
+/// 連続する複数フレームが受信できていると判断したときに`o_locked`をアサートする。
+/// 目安として、リセット解除後に有効なフレーム受信が継続すれば5フレーム以内に1になる。
+/// ロック喪失の扱いはTask 3で明確化・実装する（complete-frame未観測が一定期間続いたら解除）。
 module output_interface (
     /// システムクロック
     i_clk: input clock,
@@ -45,6 +54,8 @@ module output_interface (
     var locked: logic;
     // フレームカウンタ（ロック検出用）
     var frame_cnt: logic<4>;
+    // complete-frame未観測カウンタ（ロック解除用）
+    var no_frame_cnt: logic<16>;
     // UserBit由来のS/MUX有効フラグ
     var smux_active: logic;
 
@@ -66,8 +77,9 @@ module output_interface (
     // 数フレーム連続で同期が取れたらロック
     always_ff {
         if_reset {
-            frame_cnt = 4'd0;
-            locked    = 1'b0;
+            frame_cnt    = 4'd0;
+            locked       = 1'b0;
+            no_frame_cnt = 16'd0;
         } else if i_data_valid && i_channel == 3'd7 {
             // 最後のチャンネル受信でカウントアップ
             if frame_cnt <: 4'd15 {
@@ -75,6 +87,20 @@ module output_interface (
             }
             if frame_cnt >= 4'd4 {
                 locked = 1'b1;
+            }
+
+            // complete-frame観測でwatchdogリセット
+            no_frame_cnt = 16'd0;
+        } else {
+            // complete-frameが来ない期間をカウント
+            if no_frame_cnt <: 16'hFFFF {
+                no_frame_cnt = no_frame_cnt + 16'd1;
+            }
+
+            // complete-frame未観測が一定期間続いたらロック解除
+            if no_frame_cnt >: (i_frame_time << 1) {
+                frame_cnt = 4'd0;
+                locked    = 1'b0;
             }
         }
     }
@@ -211,6 +237,23 @@ module tb_output_interface;
     end
     if (smux_active !== 1'b0) begin
       $error("FAIL: smux_active should be 0");
+      pass = 0;
+    end
+
+    // Test 1b: Unlock on missing complete-frame
+    $display("=== Test 1b: Unlock on Missing Frames ===");
+    data_valid = 1'b0;
+    // Wait long enough to exceed watchdog threshold (~2 * frame_time)
+    repeat (5000) @(posedge clk);
+    if (locked) begin
+      $error("FAIL: locked should deassert after missing frames");
+      pass = 0;
+    end
+
+    // Relock after frames resume
+    send_frame(5);
+    if (!locked) begin
+      $error("FAIL: locked not reasserted after frames resumed");
       pass = 0;
     end
 
