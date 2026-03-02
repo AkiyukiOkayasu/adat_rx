@@ -22,22 +22,17 @@ Veryl RTL ADAT receiver/transmitter. Decodes TOSLINK ADAT into 8-channel 24-bit 
 | TX NRZI encoder | src/tx_nrzi_encoder.veryl | Bit stream → NRZI line encoding |
 | Shared types/constants | src/adat_pkg.veryl | SampleRate enum + frame timing constants |
 | S/MUX + output | src/output_interface.veryl | Word clock, valid/locked, S/MUX active detection (UserBit only) |
-| Stdlib SV | dependencies/std/** | Generated std modules (do not edit) |
 
 ## CONVENTIONS
 
 - Doc comments and implementation comments are Japanese; identifiers/ports are English.
 - Ports: inputs use `i_`, outputs use `o_`, active-low uses `_n`.
-- WaveDrom is embedded in Veryl doc comments with `/// ```wavedrom` blocks.
-- Follow the existing patterns in the codebase
-- Prefer explicit over clever
 - Delete dead code immediately
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
 - Do not edit generated outputs under `target/` or `doc/` by hand.
 - Do not edit vendored stdlib under `dependencies/std/` directly; regenerate upstream.
-- Do not use GTKWave on macOS; use Surfer for FST traces.
 
 ## COMMANDS
 
@@ -49,8 +44,6 @@ veryl clean
 
 # Simulation + tests
 veryl test
-veryl test --wave
-surfer src/tb_adat_rx.fst
 ```
 
 ## NOTES
