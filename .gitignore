@@ -36,5 +36,5 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
-doc
+# doc
 .opencode/oh-my-opencode.jsonc
