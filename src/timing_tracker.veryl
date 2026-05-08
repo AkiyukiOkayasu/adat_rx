@@ -115,76 +115,54 @@ module timing_tracker (
 }
 
 #[test(tb_timing_tracker)]
-embed (inline) sv{{{
-    module tb_timing_tracker;
-        logic clk;
-        logic rst;
-        logic edge_pulse;
-        logic [11:0] edge_time;
-        logic sync_detect;
-        logic [11:0] frame_time;
+module tb_timing_tracker {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen (
+        clk  ,
+    );
 
-        initial begin
-            clk = 0;
-            forever #10 clk = ~clk;
-        end
+    // DUT信号
+    var edge_pulse : logic    ;
+    var edge_time  : logic<12>;
+    var sync_detect: logic    ;
+    var frame_time : logic<12>;
 
-        adat_rx_timing_tracker u_dut (
-            .i_clk(clk),
-            .i_rst(rst),
-            .i_edge(edge_pulse),
-            .o_edge_time(edge_time),
-            .o_sync_detect(sync_detect),
-            .o_frame_time(frame_time)
-        );
+    inst dut: timing_tracker (
+        i_clk        : clk        ,
+        i_rst        : rst        ,
+        i_edge       : edge_pulse ,
+        o_edge_time  : edge_time  ,
+        o_sync_detect: sync_detect,
+        o_frame_time : frame_time ,
+    );
 
-        int pass;
+    // pulse_edge相当の関数
+    function pulse_edge (
+        gap_cycles: input logic<32>,
+    ) {
+        edge_pulse = 1'b0;
+        clk.next  (gap_cycles);
+        edge_pulse = 1'b1;
+        clk.next  (1);
+        edge_pulse = 1'b0;
+    }
 
-        task pulse_edge(input int gap_cycles);
-            begin
-                edge_pulse = 1'b0;
-                repeat (gap_cycles) @(posedge clk);
-                edge_pulse = 1'b1;
-                @(posedge clk);
-                edge_pulse = 1'b0;
-            end
-        endtask
+    initial {
+        edge_pulse = 1'b0;
+        rst.assert();
 
-        initial begin
-            pass = 1;
-            rst = 1'b0;
-            edge_pulse = 1'b0;
-            repeat (2) @(posedge clk);
-            rst = 1'b1;
-            repeat (2) @(posedge clk);
+        // Test 1: short interval → sync_detect = 1
+        pulse_edge(4);
+        $assert   (sync_detect == 1'b1);
 
-            pulse_edge(4);
-            if (sync_detect !== 1'b1) begin
-                $error("FAIL: sync_detect should be 1 for short interval");
-                pass = 0;
-            end
+        // Test 2: long interval → sync_detect = 0
+        pulse_edge(40);
+        $assert   (sync_detect == 1'b0);
 
-            pulse_edge(40);
-            if (sync_detect !== 1'b0) begin
-                $error("FAIL: sync_detect should be 0 for long interval");
-                pass = 0;
-            end
+        // Test 3: recovery after long gap
+        pulse_edge(4);
+        $assert   (sync_detect == 1'b1);
 
-            // Negative test: recover after a long gap (must not wedge)
-            pulse_edge(4);
-            if (sync_detect !== 1'b1) begin
-                $error("FAIL: sync_detect should recover to 1 after long interval");
-                pass = 0;
-            end
-
-            if (pass) begin
-                $display("*** TEST PASSED ***");
-            end else begin
-                $error("*** TEST FAILED ***");
-            end
-
-            #20;
-            $finish;
-        end
-    endmodule
-}}}
+        $finish();
+    }
+}
