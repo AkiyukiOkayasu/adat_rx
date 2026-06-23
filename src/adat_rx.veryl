@@ -206,31 +206,6 @@ pub module adat_rx (
     o_valid: output logic,
     /// 同期ロック状態
     o_locked: output logic,
-    /// デバッグ: エッジ間隔カウント
-    o_dbg_edge_time: output logic<12>,
-    /// デバッグ: フレーム時間カウント
-    o_dbg_frame_time: output logic<12>,
-    /// デバッグ: 同期マスク (1=データ期間)
-    o_dbg_sync_detect: output logic,
-    /// デバッグ: デコードビット数
-    o_dbg_bit_count: output logic<3>,
-    /// デバッグ: ビットデコード有効
-    o_dbg_bits_valid: output logic,
-    /// デバッグ: フレーム内ビットカウンタ
-    o_dbg_bit_counter: output logic<8>,
-    /// デバッグ: パース済みチャンネル番号
-    o_dbg_channel: output logic<3>,
-    /// デバッグ: パース済みデータ有効
-    o_dbg_data_valid: output logic,
-    /// デバッグ: complete-frame未観測カウンタ
-    o_dbg_no_frame_cnt: output logic<16>,
-    /// デバッグ: ロック判定用フレームカウンタ
-    o_dbg_frame_cnt: output logic<4>,
-    /// デバッグ: 16chロジアナ用圧縮プローブ
-    ///
-    /// [15] locked, [14] valid, [13] sync_detect, [12] bits_valid,
-    /// [11:9] bit_count, [8:3] edge_time[5:0], [2:0] channel
-    o_dbg_probe: output logic<16>,
 ) {
     // 内部信号
     var adat_edge  : logic    ;
@@ -239,13 +214,12 @@ pub module adat_rx (
     var sync_detect: logic    ;
     var frame_time : logic<12>;
 
-    var bits           : logic<5> ;
-    var bit_count      : logic<3> ;
-    var bits_valid     : logic    ;
-    var pcm_data       : logic<24>;
-    var channel        : logic<3> ;
-    var data_valid     : logic    ;
-    var dbg_bit_counter: logic<8> ;
+    var bits      : logic<5> ;
+    var bit_count : logic<3> ;
+    var bits_valid: logic    ;
+    var pcm_data  : logic<24>;
+    var channel   : logic<3> ;
+    var data_valid: logic    ;
 
     // 非同期ADAT入力の同期化
     inst u_sync: $std::synchronizer_basic ( i_clk, i_rst, i_d: i_adat, o_d: synced );
@@ -289,55 +263,38 @@ pub module adat_rx (
     );
 
     // UserBits出力信号
-    var user_bits       : logic<4> ;
-    var dbg_no_frame_cnt: logic<16>;
-    var dbg_frame_cnt   : logic<4> ;
+    var user_bits: logic<4>;
 
     // フレームパーサモジュール
     inst u_frame_parser: frame_parser (
-        i_clk            : i_clk          ,
-        i_rst            : i_rst          ,
-        i_bits           : bits           ,
-        i_bit_count      : bit_count      ,
-        i_valid          : bits_valid     ,
-        i_sync           : sync_detect    ,
-        o_user           : user_bits      ,
-        o_data           : pcm_data       ,
-        o_channel        : channel        ,
-        o_data_valid     : data_valid     ,
-        o_dbg_bit_counter: dbg_bit_counter,
+        i_clk       : i_clk      ,
+        i_rst       : i_rst      ,
+        i_bits      : bits       ,
+        i_bit_count : bit_count  ,
+        i_valid     : bits_valid ,
+        i_sync      : sync_detect,
+        o_user      : user_bits  ,
+        o_data      : pcm_data   ,
+        o_channel   : channel    ,
+        o_data_valid: data_valid ,
     );
 
     // 出力インターフェースモジュール
     inst u_output_interface: output_interface (
-        i_clk             : i_clk           ,
-        i_rst             : i_rst           ,
-        i_frame_time      : frame_time      ,
-        i_data            : pcm_data        ,
-        i_channel         : channel         ,
-        i_data_valid      : data_valid      ,
-        i_sync            : sync_detect     ,
-        i_user_bits       : user_bits       ,
-        o_smux_active     : o_smux_active   ,
-        o_frame_clk       : o_frame_clk     ,
-        o_channels        : o_channels      ,
-        o_valid           : o_valid         ,
-        o_locked          : o_locked        ,
-        o_dbg_no_frame_cnt: dbg_no_frame_cnt,
-        o_dbg_frame_cnt   : dbg_frame_cnt   ,
+        i_clk        : i_clk        ,
+        i_rst        : i_rst        ,
+        i_frame_time : frame_time   ,
+        i_data       : pcm_data     ,
+        i_channel    : channel      ,
+        i_data_valid : data_valid   ,
+        i_sync       : sync_detect  ,
+        i_user_bits  : user_bits    ,
+        o_smux_active: o_smux_active,
+        o_frame_clk  : o_frame_clk  ,
+        o_channels   : o_channels   ,
+        o_valid      : o_valid      ,
+        o_locked     : o_locked     ,
     );
-
-    assign o_dbg_edge_time    = edge_time;
-    assign o_dbg_frame_time   = frame_time;
-    assign o_dbg_sync_detect  = sync_detect;
-    assign o_dbg_bit_count    = bit_count;
-    assign o_dbg_bits_valid   = bits_valid;
-    assign o_dbg_bit_counter  = dbg_bit_counter;
-    assign o_dbg_channel      = channel;
-    assign o_dbg_data_valid   = data_valid;
-    assign o_dbg_no_frame_cnt = dbg_no_frame_cnt;
-    assign o_dbg_frame_cnt    = dbg_frame_cnt;
-    assign o_dbg_probe        = {o_locked, o_valid, sync_detect, bits_valid, bit_count, edge_time[5:0], channel};
 }
 
 #[test(tb_adat_rx)]

@@ -53,8 +53,6 @@ module frame_parser (
     o_channel: output logic<3>,
     /// データ有効
     o_data_valid: output logic,
-    /// デバッグ: フレーム内ビットカウンタ
-    o_dbg_bit_counter: output logic<8>,
 ) {
     // フレーム内ビットカウンタ
     var bit_counter: logic<8>;
@@ -68,11 +66,10 @@ module frame_parser (
     var r_channel: logic<3> ;
     var r_valid  : logic    ;
 
-    assign o_user            = r_user;
-    assign o_data            = r_data;
-    assign o_channel         = r_channel;
-    assign o_data_valid      = r_valid;
-    assign o_dbg_bit_counter = bit_counter;
+    assign o_user       = r_user;
+    assign o_data       = r_data;
+    assign o_channel    = r_channel;
+    assign o_data_valid = r_valid;
 
     // 次シフト値（i_bit_countに応じてLSB側に追加）
     always_comb {
