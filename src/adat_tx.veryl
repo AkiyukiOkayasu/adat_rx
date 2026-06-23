@@ -102,13 +102,7 @@ pub module adat_tx #(
     );
 
     // NRZIエンコード
-    inst u_nrzi_encoder: tx_nrzi_encoder (
-        i_clk                    ,
-        i_rst                    ,
-        i_bit  : serial_bit      ,
-        i_valid: serial_bit_valid,
-        o_nrzi : o_adat          ,
-    );
+    inst u_nrzi_encoder: tx_nrzi_encoder ( i_clk, i_rst, i_bit: serial_bit, i_valid: serial_bit_valid, o_nrzi: o_adat );
 }
 
 #[test(tb_adat_tx_48k)]

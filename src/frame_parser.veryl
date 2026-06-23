@@ -94,9 +94,19 @@ module frame_parser (
             r_valid     = 1'b0;
         } else if !i_sync {
             // 同期期間: カウンタリセット
+            // SYNC到達時に Ch7 完了間近であれば強制抽出
+            if bit_counter >= 8'd242 {
+                r_data    = {
+                    shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6],
+                    shift_reg[4:1]
+                };
+                r_channel = 3'd7;
+                r_valid   = 1'b1;
+            } else {
+                r_valid = 1'b0;
+            }
             bit_counter = 8'd0;
             shift_reg   = 30'd0;
-            r_valid     = 1'b0;
         } else if i_valid {
             // ビットをシフトレジスタに追加
             shift_reg   = shift_next;
@@ -116,35 +126,59 @@ module frame_parser (
                 // 30bit -> 24bit: 各5bitのnibbleから上位4bitを抽出
                 // LSBは同期用セパレーターのため破棄
                 // shift_reg[29:26], [24:21], [19:16], [14:11], [9:6], [4:1]
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd0;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd65 && next_count >: 8'd64 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd1;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd95 && next_count >: 8'd94 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd2;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd125 && next_count >: 8'd124 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd3;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd155 && next_count >: 8'd154 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd4;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd185 && next_count >: 8'd184 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd5;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd215 && next_count >: 8'd214 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd6;
                 r_valid   = 1'b1;
             } else if bit_counter <: 8'd245 && next_count >: 8'd244 {
-                r_data    = {shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6], shift_next[4:1]};
+                r_data    = {
+                    shift_next[29:26], shift_next[24:21], shift_next[19:16], shift_next[14:11], shift_next[9:6],
+                    shift_next[4:1]
+                };
                 r_channel = 3'd7;
                 r_valid   = 1'b1;
             } else {
@@ -311,14 +345,86 @@ embed (inline) sv{{{
        $display("PASS: bit-order test");
      end
 
-     if (pass) begin
-       $display("*** TEST PASSED ***");
-     end else begin
-       $error("*** TEST FAILED ***");
-     end
+      // === Force Ch7 Completion Test ===
+      $display("=== Force Ch7 Completion Test ===");
 
-     #20;
-     $finish;
-   end
- endmodule
- }}}
+      sync = 1'b0;
+      @(posedge clk);
+      sync = 1'b1;
+      repeat (2) @(posedge clk);
+
+      // User bits (0xA)
+      push_bits(5'b11010, 3'd5);
+
+      // Ch0-Ch6 dummy data
+      repeat (42) begin
+        push_bits(5'b11111, 3'd5);
+      end
+
+      // Ch7 partial data to reach bit_counter = 242
+      push_bits(5'b10101, 3'd5);
+      push_bits(5'b11101, 3'd5);
+      push_bits(5'b10011, 3'd5);
+      push_bits(5'b11011, 3'd5);
+      push_bits(5'b10111, 3'd5);
+      push_bits(5'b00011, 3'd2);
+
+      // SYNC arrival
+      sync = 1'b0;
+      @(posedge clk);
+
+      if (!(data_valid && channel == 3'd7)) begin
+        $error("FAIL: force ch7 completion");
+        pass = 0;
+      end else begin
+        $display("PASS: force ch7 completion");
+      end
+
+      sync = 1'b1;
+      @(posedge clk);
+
+      // === Force Ch7 Completion Boundary Test ===
+      $display("=== Force Ch7 Completion Boundary Test ===");
+
+      // bit_counter = 241: Ch7 26 bits (5 full nibbles + 1 bit)
+      // Should NOT trigger forced completion
+      sync = 1'b0;
+      @(posedge clk);
+      sync = 1'b1;
+      repeat (2) @(posedge clk);
+
+      push_bits(5'b11010, 3'd5);  // User bits
+      repeat (42) begin
+        push_bits(5'b11111, 3'd5);  // Ch0-Ch6
+      end
+      push_bits(5'b10101, 3'd5);  // Ch7 nibble 5
+      push_bits(5'b11101, 3'd5);  // Ch7 nibble 4
+      push_bits(5'b10011, 3'd5);  // Ch7 nibble 3
+      push_bits(5'b11011, 3'd5);  // Ch7 nibble 2
+      push_bits(5'b10111, 3'd5);  // Ch7 nibble 1
+      push_bits(5'b00001, 3'd1);  // Ch7 nibble 0: 1 bit
+
+      sync = 1'b0;
+      @(posedge clk);
+
+      if (data_valid) begin
+        $error("FAIL: bit_counter=241 should not trigger forced completion");
+        pass = 0;
+      end else begin
+        $display("PASS: bit_counter=241 correctly skipped");
+      end
+
+      sync = 1'b1;
+      @(posedge clk);
+
+      if (pass) begin
+        $display("*** TEST PASSED ***");
+      end else begin
+        $error("*** TEST FAILED ***");
+      end
+
+      #20;
+      $finish;
+    end
+  endmodule
+  }}}

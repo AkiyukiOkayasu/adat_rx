@@ -222,12 +222,7 @@ pub module adat_rx (
     var data_valid: logic    ;
 
     // 非同期ADAT入力の同期化
-    inst u_sync: $std::synchronizer_basic (
-        i_clk        ,
-        i_rst        ,
-        i_d  : i_adat,
-        o_d  : synced,
-    );
+    inst u_sync: $std::synchronizer_basic ( i_clk, i_rst, i_d: i_adat, o_d: synced );
 
     // エッジ検出
     inst u_edge_detector: $std::edge_detector (
@@ -252,12 +247,7 @@ pub module adat_rx (
 
     // ビットデコーダ入力を1サイクル遅延
     var edge_delay: logic;
-    inst u_delay_edge: $std::delay (
-        i_clk            ,
-        i_rst            ,
-        i_d  : adat_edge ,
-        o_d  : edge_delay,
-    );
+    inst u_delay_edge: $std::delay ( i_clk, i_rst, i_d: adat_edge, o_d: edge_delay );
 
     // ビットデコーダモジュール
     inst u_bit_decoder: bit_decoder (

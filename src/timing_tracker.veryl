@@ -117,9 +117,7 @@ module timing_tracker (
 #[test(tb_timing_tracker)]
 module tb_timing_tracker {
     inst clk: $tb::clock_gen;
-    inst rst: $tb::reset_gen (
-        clk  ,
-    );
+    inst rst: $tb::reset_gen ( clk );
 
     // DUT信号
     var edge_pulse : logic    ;
