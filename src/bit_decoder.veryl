@@ -9,11 +9,11 @@
 /// - 最大5ビット連続（4データビット + 1同期ビット）
 ///
 /// # 時間ビン
-/// - 0.5〜1.5 bit time → 1 bit ("1")
-/// - 1.5〜2.5 bit time → 2 bits ("01")
-/// - 2.5〜3.5 bit time → 3 bits ("001")
-/// - 3.5〜4.5 bit time → 4 bits ("0001")
-/// - 4.5〜5.5 bit time → 5 bits ("00001")
+/// - 0.5以上〜1.5 bit time未満 → 1 bit ("1")
+/// - 1.5以上〜2.5 bit time未満 → 2 bits ("01")
+/// - 2.5以上〜3.5 bit time未満 → 3 bits ("001")
+/// - 3.5以上〜4.5 bit time未満 → 4 bits ("0001")
+/// - 4.5 bit time以上 → 5 bits ("00001")
 module bit_decoder (
     /// システムクロック
     i_clk: input clock,
@@ -65,19 +65,21 @@ module bit_decoder (
 
             // 時間ビンによるビット数判定
             // NRZIデコード: 遷移で終わる→最後が'1'
-            if edge_bits <= t1 {
+            // 境界値は上側binへ入れる。
+            // 50MHz/48kHzでは1.5bit境界が約6.1clkで、実測6clkは2bit側に寄せる方が安定する。
+            if edge_bits <: t1 {
                 // 1 bit: "1"
                 r_bits  = 5'b00001;
                 r_count = 3'd1;
-            } else if edge_bits <= t2 {
+            } else if edge_bits <: t2 {
                 // 2 bits: "01"
                 r_bits  = 5'b00010;
                 r_count = 3'd2;
-            } else if edge_bits <= t3 {
+            } else if edge_bits <: t3 {
                 // 3 bits: "001"
                 r_bits  = 5'b00100;
                 r_count = 3'd3;
-            } else if edge_bits <= t4 {
+            } else if edge_bits <: t4 {
                 // 4 bits: "0001"
                 r_bits  = 5'b01000;
                 r_count = 3'd4;
@@ -162,6 +164,30 @@ module tb_bit_decoder {
         sync_mask    = 1'b0;
         trigger_edge(12'd1);
         $assert     (valid == 1'b0);
+
+        // Test 5: threshold boundary values should round up to the wider interval
+        sync_mask  = 1'b1;
+        frame_time = 12'd1042; // bit_time = 4clk, thresholds: 6, 10, 14, 18
+
+        trigger_edge(12'd5);
+        $assert     (valid == 1'b1);
+        $assert     (bit_count == 3'd1);
+
+        trigger_edge(12'd6);
+        $assert     (valid == 1'b1);
+        $assert     (bit_count == 3'd2);
+
+        trigger_edge(12'd10);
+        $assert     (valid == 1'b1);
+        $assert     (bit_count == 3'd3);
+
+        trigger_edge(12'd14);
+        $assert     (valid == 1'b1);
+        $assert     (bit_count == 3'd4);
+
+        trigger_edge(12'd18);
+        $assert     (valid == 1'b1);
+        $assert     (bit_count == 3'd5);
 
         $finish();
     }
