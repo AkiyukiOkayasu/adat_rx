@@ -53,6 +53,8 @@ module frame_parser (
     o_channel: output logic<3>,
     /// データ有効
     o_data_valid: output logic,
+    /// デバッグ: フレーム内ビットカウンタ
+    o_dbg_bit_counter: output logic<8>,
 ) {
     // フレーム内ビットカウンタ
     var bit_counter: logic<8>;
@@ -66,10 +68,11 @@ module frame_parser (
     var r_channel: logic<3> ;
     var r_valid  : logic    ;
 
-    assign o_user       = r_user;
-    assign o_data       = r_data;
-    assign o_channel    = r_channel;
-    assign o_data_valid = r_valid;
+    assign o_user            = r_user;
+    assign o_data            = r_data;
+    assign o_channel         = r_channel;
+    assign o_data_valid      = r_valid;
+    assign o_dbg_bit_counter = bit_counter;
 
     // 次シフト値（i_bit_countに応じてLSB側に追加）
     always_comb {
@@ -93,13 +96,12 @@ module frame_parser (
             r_channel   = 3'd0;
             r_valid     = 1'b0;
         } else if !i_sync {
-            // 同期期間: カウンタリセット
-            // SYNC到達時に Ch7 完了間近であれば強制抽出
-            // bit_counter == 245 の場合は通常の Ch7 抽出済みなのでスキップ
-            if bit_counter >= 8'd242 && bit_counter <: 8'd245 {
+            // 同期期間: Ch7最後のseparatorだけがSYNC長区間に吸い込まれた場合は回収する
+            if bit_counter == 8'd244 && shift_reg[24] == 1'b1 && shift_reg[19] == 1'b1 && shift_reg[14] == 1'b1
+                && shift_reg[9] == 1'b1 && shift_reg[4] == 1'b1 {
                 r_data    = {
-                    shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6],
-                    shift_reg[4:1]
+                    shift_reg[28:25], shift_reg[23:20], shift_reg[18:15], shift_reg[13:10], shift_reg[8:5],
+                    shift_reg[3:0]
                 };
                 r_channel = 3'd7;
                 r_valid   = 1'b1;
@@ -346,8 +348,8 @@ embed (inline) sv{{{
        $display("PASS: bit-order test");
      end
 
-      // === Force Ch7 Completion Test ===
-      $display("=== Force Ch7 Completion Test ===");
+      // === Incomplete Ch7 Discard Test ===
+      $display("=== Incomplete Ch7 Discard Test ===");
 
       sync = 1'b0;
       @(posedge clk);
@@ -374,18 +376,18 @@ embed (inline) sv{{{
       sync = 1'b0;
       @(posedge clk);
 
-      if (!(data_valid && channel == 3'd7)) begin
-        $error("FAIL: force ch7 completion");
+      if (data_valid) begin
+        $error("FAIL: bit_counter=242 should discard incomplete ch7");
         pass = 0;
       end else begin
-        $display("PASS: force ch7 completion");
+        $display("PASS: bit_counter=242 correctly discarded");
       end
 
       sync = 1'b1;
       @(posedge clk);
 
-      // === Force Ch7 Completion Boundary Test ===
-      $display("=== Force Ch7 Completion Boundary Test ===");
+      // === Incomplete Ch7 Boundary Test ===
+      $display("=== Incomplete Ch7 Boundary Test ===");
 
       // bit_counter = 241: Ch7 26 bits (5 full nibbles + 1 bit)
       // Should NOT trigger forced completion
@@ -413,6 +415,75 @@ embed (inline) sv{{{
         pass = 0;
       end else begin
         $display("PASS: bit_counter=241 correctly skipped");
+      end
+
+      sync = 1'b1;
+      @(posedge clk);
+
+      // === Ch7 Missing Final Separator Recovery Test ===
+      $display("=== Ch7 Missing Final Separator Recovery Test ===");
+
+      sync = 1'b0;
+      @(posedge clk);
+      sync = 1'b1;
+      repeat (2) @(posedge clk);
+
+      push_bits(5'b11010, 3'd5);  // User bits
+      repeat (42) begin
+        push_bits(5'b11111, 3'd5);  // Ch0-Ch6
+      end
+
+      // Ch7 = 24'h123456, but final separator is absorbed into the following SYNC interval.
+      push_bits(5'b11000, 3'd5);  // nibble 5: 0x1 + separator
+      push_bits(5'b10100, 3'd5);  // nibble 4: 0x2 + separator
+      push_bits(5'b11100, 3'd5);  // nibble 3: 0x3 + separator
+      push_bits(5'b10010, 3'd5);  // nibble 2: 0x4 + separator
+      push_bits(5'b11010, 3'd5);  // nibble 1: 0x5 + separator
+      push_bits(5'b00110, 3'd4);  // nibble 0: 0x6 without final separator
+
+      sync = 1'b0;
+      @(posedge clk);
+
+      if (!(data_valid && channel == 3'd7 && data == 24'h123456)) begin
+        $error("FAIL: bit_counter=244 final-separator recovery expected ch7=123456 got valid=%b ch=%0d data=%h",
+               data_valid, channel, data);
+        pass = 0;
+      end else begin
+        $display("PASS: bit_counter=244 final-separator recovery");
+      end
+
+      sync = 1'b1;
+      @(posedge clk);
+
+      // === Ch7 244-bit Misaligned Discard Test ===
+      $display("=== Ch7 244-bit Misaligned Discard Test ===");
+
+      sync = 1'b0;
+      @(posedge clk);
+      sync = 1'b1;
+      repeat (2) @(posedge clk);
+
+      push_bits(5'b11010, 3'd5);  // User bits
+      repeat (42) begin
+        push_bits(5'b11111, 3'd5);  // Ch0-Ch6
+      end
+
+      // 244bitだがseparator位置が崩れているので回収してはいけない。
+      push_bits(5'b01000, 3'd5);
+      push_bits(5'b10100, 3'd5);
+      push_bits(5'b11100, 3'd5);
+      push_bits(5'b10010, 3'd5);
+      push_bits(5'b11010, 3'd5);
+      push_bits(5'b00110, 3'd4);
+
+      sync = 1'b0;
+      @(posedge clk);
+
+      if (data_valid) begin
+        $error("FAIL: misaligned bit_counter=244 should be discarded");
+        pass = 0;
+      end else begin
+        $display("PASS: misaligned bit_counter=244 discarded");
       end
 
       sync = 1'b1;

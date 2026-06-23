@@ -41,6 +41,10 @@ module output_interface (
     o_valid: output logic,
     /// 同期ロック状態
     o_locked: output logic,
+    /// デバッグ: complete-frame未観測カウンタ
+    o_dbg_no_frame_cnt: output logic<16>,
+    /// デバッグ: ロック判定用フレームカウンタ
+    o_dbg_frame_cnt: output logic<4>,
 ) {
     // ワードクロックカウンタ
     var word_clk_cnt: logic<12>;
@@ -63,10 +67,12 @@ module output_interface (
     // Note: ここからS/MUX2とS/MUX4の区別はできない
     assign smux_active = i_user_bits[1];
 
-    assign o_smux_active = smux_active;
-    assign o_frame_clk   = word_clk;
-    assign o_valid       = valid_out;
-    assign o_locked      = locked;
+    assign o_smux_active      = smux_active;
+    assign o_frame_clk        = word_clk;
+    assign o_valid            = valid_out;
+    assign o_locked           = locked;
+    assign o_dbg_no_frame_cnt = no_frame_cnt;
+    assign o_dbg_frame_cnt    = frame_cnt;
 
     // チャンネル出力割り当て
     for i in 0..8 :g_ch_out {
