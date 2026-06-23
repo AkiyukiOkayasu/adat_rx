@@ -95,7 +95,8 @@ module frame_parser (
         } else if !i_sync {
             // 同期期間: カウンタリセット
             // SYNC到達時に Ch7 完了間近であれば強制抽出
-            if bit_counter >= 8'd242 {
+            // bit_counter == 245 の場合は通常の Ch7 抽出済みなのでスキップ
+            if bit_counter >= 8'd242 && bit_counter <: 8'd245 {
                 r_data    = {
                     shift_reg[29:26], shift_reg[24:21], shift_reg[19:16], shift_reg[14:11], shift_reg[9:6],
                     shift_reg[4:1]
@@ -412,6 +413,43 @@ embed (inline) sv{{{
         pass = 0;
       end else begin
         $display("PASS: bit_counter=241 correctly skipped");
+      end
+
+      sync = 1'b1;
+      @(posedge clk);
+
+      // === No Double Valid After Normal Ch7 Extraction Test ===
+      $display("=== No Double Valid After Normal Ch7 Extraction Test ===");
+
+      sync = 1'b0;
+      @(posedge clk);
+      sync = 1'b1;
+      repeat (2) @(posedge clk);
+
+      // User bits
+      push_bits(5'b11010, 3'd5);
+
+      // Ch0-Ch7 full data: 8 channels * 6 nibbles = 48 pushes
+      repeat (48) begin
+        push_bits(5'b11111, 3'd5);
+      end
+
+      // Normal Ch7 extraction should have occurred at bit_counter = 245
+      if (!(data_valid && channel == 3'd7)) begin
+        $error("FAIL: normal ch7 extraction missing");
+        pass = 0;
+      end
+
+      // Next cycle: SYNC arrives
+      sync = 1'b0;
+      @(posedge clk);
+
+      // Forced completion must NOT fire because Ch7 was already extracted
+      if (data_valid) begin
+        $error("FAIL: double valid detected after normal ch7 extraction");
+        pass = 0;
+      end else begin
+        $display("PASS: no double valid after normal ch7 extraction");
       end
 
       sync = 1'b1;
