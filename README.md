@@ -1,3 +1,7 @@
+ARCHIVED  
+
+[groundless_veryl_cores](https://github.com/AkiyukiOkayasu/groundless_veryl_cores)に移行しました
+
 # ADAT transceiver
 
 [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-2ea44f?logo=github)](https://akiyukiokayasu.github.io/adat_rx/)
